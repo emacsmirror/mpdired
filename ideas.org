@@ -1,0 +1,8 @@
+* 2 vue : selection et queue (currently playing songs)
+* interface dired-like
+** vue queue
+   - d x : select, remove file
+   - D
+   - % m : with playlistfind
+* mode déconnecté au maximum
+* don't mess with the mode-line
