@@ -29,7 +29,8 @@
 	       ;; This new directory is either a subdir of the current
 	       ;; one or a new directory of the same level of the
 	       ;; current one.  In this last case we need to go one
-	       ;; line backward and quit the loop.
+	       ;; line backward (because we will go forward later) and
+	       ;; quit the loop.
 	       (cond ((mpdired--subdir-p current new)
 		      (forward-line)
 		      (push (mpdired--parse-listall-1 new (list new)) accum))
@@ -52,9 +53,29 @@
 	(content (mpdired--parse-listall)))
     (with-current-buffer out
       (erase-buffer)
-      (dolist (e content)
-	(cond ((stringp e) (insert (format "%s\n" e)))
-	      ((consp e) (insert (format ">%s\n" (car e)))))))))
+      (save-excursion
+	(let* ((content (if (cddr content) content (cadr content)))
+	       (top (if (string= (car content) "")
+			"*toplevel*"
+		      (car content))))
+	  (insert (format "--- %s ---\n" top))
+	  (dolist (e (cdr content))
+	    (cond ((stringp e) (insert (format "%s\n" e)))
+		  ((consp e) (insert (format ">%s\n" (car e)))))))))))
+
+(defun my-filter (proc string)
+  (when (buffer-live-p (process-buffer proc))
+    (with-current-buffer (process-buffer proc)
+      (let ((moving (= (point) (process-mark proc))))
+	(save-excursion
+	  ;; Insert the text, advancing the process marker.
+	  (goto-char (process-mark proc))
+	  (insert string)
+	  (set-marker (process-mark proc) (point)))
+	(if moving (goto-char (process-mark proc)))
+	(when (re-search-backward "^OK$" nil t)
+	  (mpdired-present-listall (process-contact proc))
+	  (set-buffer-modified-p nil))))))
 
 (defun msg-me (process event)
   (unless (string-search "connection broken" event)
@@ -67,7 +88,7 @@
   ;; file, that should be our Unix socket.
   (file-exists-p (expand-file-name host)))
 
-(defun mpc-connect ()
+(defun mpdired-listall (path)
   (with-current-buffer (get-buffer-create "*mpdired-work*")
     (setq-local buffer-read-only nil)
     (erase-buffer)
@@ -84,9 +105,11 @@
 						    :coding 'utf-8
 						    :filter 'my-filter
 						    :sentinel 'msg-me)))
-      ;;(process-send-string proc "list album\n")
-      ;;(process-send-string proc "playlistinfo\n")
-      (process-send-string mpdired-process "listall \"\"\n")
-      ;;(process-send-string proc "close\n")
-      ;;(buffer-string)
-      )))
+      (process-send-string mpdired-process (format "listall \"%s\"\n" path)))))
+
+(defun mpdired-test-me ()
+  (interactive)
+  ;;(mpdired-listall "")
+  (mpdired-listall "Aftermath")
+  ;;(mpdired-listall "Arcade Fire")
+  )
