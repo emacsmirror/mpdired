@@ -58,10 +58,11 @@
 	       (top (if (string= (car content) "")
 			"*toplevel*"
 		      (car content))))
-	  (insert (format "--- %s ---\n" top))
+	  (insert (propertize top 'face 'bold) ":\n")
 	  (dolist (e (cdr content))
-	    (cond ((stringp e) (insert (format "%s\n" e)))
-		  ((consp e) (insert (format ">%s\n" (car e)))))))))))
+	    (cond ((stringp e) (insert e))
+		  ((consp e) (insert (propertize (car e) 'face 'dired-directory))))
+	    (insert "\n")))))))
 
 (defun my-filter (proc string)
   (when (buffer-live-p (process-buffer proc))
@@ -109,7 +110,8 @@
 
 (defun mpdired-test-me ()
   (interactive)
-  ;;(mpdired-listall "")
-  (mpdired-listall "Aftermath")
+  (mpdired-listall "")
+  ;;(mpdired-listall "Aftermath")
   ;;(mpdired-listall "Arcade Fire")
+  ;;(mpdired-listall "Arcade Fire/Funeral")
   )
