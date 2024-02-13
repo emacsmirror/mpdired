@@ -75,7 +75,8 @@
 	  (set-marker (process-mark proc) (point)))
 	(if moving (goto-char (process-mark proc)))
 	(when (re-search-backward "^OK$" nil t)
-	  (mpdired-present-listall (process-contact proc))
+	  (when (eq mpdired--last-command 'listall)
+	    (mpdired-present-listall (process-contact proc)))
 	  (set-buffer-modified-p nil))))))
 
 (defun msg-me (process event)
@@ -89,10 +90,11 @@
   ;; file, that should be our Unix socket.
   (file-exists-p (expand-file-name host)))
 
-(defun mpdired-listall (path)
+(defun mpdired--maybe-init ()
   (with-current-buffer (get-buffer-create "*mpdired-work*")
     (setq-local buffer-read-only nil)
     (erase-buffer)
+    ;; Always reparse host should the user have changed it.
     (let* ((localp (mpdired-local-p mpdired-host))
 	   (host (if localp (expand-file-name mpdired-host) mpdired-host)))
       ;; Create a new connection if needed
@@ -105,8 +107,13 @@
 						    :family (if localp 'local)
 						    :coding 'utf-8
 						    :filter 'my-filter
-						    :sentinel 'msg-me)))
-      (process-send-string mpdired-process (format "listall \"%s\"\n" path)))))
+						    :sentinel 'msg-me))))))
+
+(defun mpdired-listall (path)
+  (mpdired--maybe-init)
+  (with-current-buffer "*mpdired-work*"
+    (setq-local mpdired--last-command 'listall)
+    (process-send-string mpdired-process (format "listall \"%s\"\n" path))))
 
 (defun mpdired-test-me ()
   (interactive)
