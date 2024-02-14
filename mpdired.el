@@ -99,25 +99,26 @@
 	;; `content' is always of the form ("" rest...) so if there
 	;; is only one "rest" use it as content.
 	(let* ((content (if (cddr content) content (cadr content)))
-	       (top (if (string= (car content) "")
-			"*toplevel*"
-		      (car content)))
+	       (top (unless (string= "" (car content)) (car content)))
 	       (data (cdr content)))
 	  ;; Insert the content
 	  (save-excursion
-	    (insert (propertize top 'face 'bold) ":\n")
+	    (if top (insert (propertize top 'face 'bold) ":\n"))
 	    (dolist (e (butlast data))
 	      (mpdired--insert-file/dir e)
 	      (insert "\n"))
 	    (mpdired--insert-file/dir (car (last data))))
 	  ;; Go to the previous directory line
-	  (when from-directory
-	    (goto-char (point-min))
-	    (re-search-forward from-directory nil t)
-	    (goto-char (line-beginning-position)))
+	  (cond (from-directory
+		 (goto-char (point-min))
+		 (re-search-forward from-directory nil t)
+		 (goto-char (line-beginning-position)))
+		(t
+		 (goto-char (point-min))
+		 (if top (mpdired-next-line))))
 	  ;; Set mode and memorize directory
 	  (mpdired-browse-mode)
-	  (setq-local mpdired--directory (unless (string= top "*toplevel*") top)))))))
+	  (setq-local mpdired--directory (when top top)))))))
 
 (defun mpdired--filter (proc string)
   (when (buffer-live-p (process-buffer proc))
@@ -169,10 +170,11 @@
 	 (service (if localp host mpdired-port)))
     (mpdired--maybe-init host service localp)
     (with-current-buffer (mpdired--comm-name host service localp)
-      (setq-local mpdired--last-command 'listall)
-      (when from
-	(setq-local mpdired--previous-directory from))
-      (process-send-string (get-buffer-process (current-buffer)) (format "listall \"%s\"\n" path)))))
+      (let ((process (get-buffer-process (current-buffer))))
+	(when (process-live-p process)
+	  (setq-local mpdired--last-command 'listall
+		      mpdired--previous-directory (when from from))
+	  (process-send-string process (format "listall \"%s\"\n" path)))))))
 
 (defun mpdired-next-line ()
   (interactive)
@@ -198,19 +200,19 @@
     (apply 'concat (reverse res))))
 
 (defun mpdired--parent ()
-  (let ((split (split-string mpdired--directory "/")))
-    (if (= 1 (length split))
-	""
-      (mpdired--unsplit (butlast split) "/"))))
+  (when (stringp mpdired--directory)
+    (let ((split (split-string mpdired--directory "/")))
+      (if (= 1 (length split))
+	  ""
+	(mpdired--unsplit (butlast split) "/")))))
 
 (defun mpdired-goto-parent ()
   (interactive)
-  (mpdired-listall (mpdired--parent) mpdired--directory))
+  (let ((parent (mpdired--parent)))
+    (if parent
+	(mpdired-listall parent mpdired--directory)
+      (message "You are at the toplevel."))))
 
 (defun mpdired-test-me ()
   (interactive)
-  (mpdired-listall "")
-  ;;(mpdired-listall "Aftermath")
-  ;;(mpdired-listall "Arcade Fire")
-  ;;(mpdired-listall "Arcade Fire/Funeral")
-  )
+  (mpdired-listall ""))
