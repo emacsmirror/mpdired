@@ -61,7 +61,7 @@
 	mode-name "MPDired Browse"
 	buffer-read-only t))
 
-(defun mpdired-present-listall (contact)
+(defun mpdired--present-listall (contact)
   ;; Called from *mpdired-work*
   (let ((out (get-buffer-create (format "*MPDired (%s:%d)*"
 					(car contact) (cadr contact))))
@@ -83,7 +83,7 @@
 	      (insert "\n")))))
       (mpdired-browse-mode))))
 
-(defun my-filter (proc string)
+(defun mpdired--filter (proc string)
   (when (buffer-live-p (process-buffer proc))
     (with-current-buffer (process-buffer proc)
       (let ((moving (= (point) (process-mark proc))))
@@ -95,9 +95,10 @@
 	(if moving (goto-char (process-mark proc)))
 	(when (re-search-backward "^OK$" nil t)
 	  (when (eq mpdired--last-command 'listall)
-	    (mpdired-present-listall (process-contact proc))))))))
+	    (mpdired--present-listall (process-contact proc))))))))
 
-(defun msg-me (process event)
+(defun mpdired--sentinel (process event)
+  ;; Do not signal a closed connection
   (unless (string-search "connection broken" event)
     (message "Process: %s had the event '%s'" process event)))
 
@@ -125,8 +126,8 @@
 						  :service service
 						  :family (if localp 'local)
 						  :coding 'utf-8
-						  :filter 'my-filter
-						  :sentinel 'msg-me)
+						  :filter 'mpdired--filter
+						  :sentinel 'mpdired--sentinel)
 			    (current-buffer))))))
 
 (defun mpdired-listall (path)
