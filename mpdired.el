@@ -6,9 +6,11 @@
 
 (defvar-keymap mpdired-browse-mode-map
   :doc "Local keymap for MPDired browser."
-  "n" 'next-line
-  "p" 'previous-line
-  "q" 'bury-buffer)
+  "n"   'mpdired-next-line
+  "p"   'mpdired-previous-line
+  "q"   'bury-buffer
+  "C-m" 'mpdired-listall-at-point
+  "^"   'mpdired-goto-parent)
 
 (defun mpdired--subdir-p (dir-a dir-b)
   (let ((pos (string-search dir-a dir-b)))
@@ -72,6 +74,8 @@
 (defun mpdired--browser-name (host service localp)
   (format "*MPDired Browser (%s)*" (mpdired--hostname host service localp)))
 
+(defvar mpdired--directory nil)
+
 (defun mpdired--present-listall (proc)
   ;; Called from *mpdired-work*
   (let* ((peer-info (process-contact proc t))
@@ -83,19 +87,21 @@
     (with-current-buffer (get-buffer-create buffer-name)
       (let ((inhibit-read-only t))
 	(erase-buffer)
-	(save-excursion
-	  ;; `content' is always of the form ("" rest...) so if there
-	  ;; is only one "rest" use it as content.
-	  (let* ((content (if (cddr content) content (cadr content)))
-		 (top (if (string= (car content) "")
-			  "*toplevel*"
-			(car content))))
+	;; `content' is always of the form ("" rest...) so if there
+	;; is only one "rest" use it as content.
+	(let* ((content (if (cddr content) content (cadr content)))
+	       (top (if (string= (car content) "")
+			"*toplevel*"
+		      (car content))))
+	  (save-excursion
 	    (insert (propertize top 'face 'bold) ":\n")
 	    (dolist (e (cdr content))
 	      (cond ((stringp e) (insert e))
 		    ((consp e) (insert (propertize (car e) 'face 'dired-directory))))
-	      (insert "\n")))))
-      (mpdired-browse-mode))))
+	      (insert "\n")))
+	  ;; Set mode and memorize directory
+	  (mpdired-browse-mode)
+	  (setq-local mpdired--directory top))))))
 
 (defun mpdired--filter (proc string)
   (when (buffer-live-p (process-buffer proc))
@@ -148,6 +154,37 @@
     (with-current-buffer (mpdired--comm-name host service localp)
       (setq-local mpdired--last-command 'listall)
       (process-send-string (get-buffer-process (current-buffer)) (format "listall \"%s\"\n" path)))))
+
+(defun mpdired-next-line ()
+  (interactive)
+  (next-line))
+
+(defun mpdired-previous-line ()
+  (interactive)
+  (previous-line))
+
+(defun mpdired-listall-at-point ()
+  (interactive)
+  (re-search-forward "^\\(.*\\)$" (line-end-position) t)
+  (mpdired-listall (match-string 1)))
+
+(defun mpdired--unsplit (list separator)
+  (let (res)
+    (dolist (e (butlast list))
+      (push e res)
+      (push separator res))
+    (push (car (last list)) res)
+    (apply 'concat (reverse res))))
+
+(defun mpdired--parent ()
+  (let ((split (split-string mpdired--directory "/")))
+    (if (= 1 (length split))
+	""
+      (mpdired--unsplit (butlast split) "/"))))
+
+(defun mpdired-goto-parent ()
+  (interactive)
+  (mpdired-listall (mpdired--parent)))
 
 (defun mpdired-test-me ()
   (interactive)
