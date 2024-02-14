@@ -61,12 +61,26 @@
 	mode-name "MPDired Browse"
 	buffer-read-only t))
 
-(defun mpdired--present-listall (contact)
+(defun mpdired--hostname (host service localp)
+  (if localp
+      (format "%s" host)
+    (format "%s:%s" host service)))
+
+(defun mpdired--comm-name (host service localp)
+  (format "*mpdired-%s*" (mpdired--hostname host service localp)))
+
+(defun mpdired--browser-name (host service localp)
+  (format "*MPDired Browser (%s)*" (mpdired--hostname host service localp)))
+
+(defun mpdired--present-listall (proc)
   ;; Called from *mpdired-work*
-  (let ((out (get-buffer-create (format "*MPDired (%s:%d)*"
-					(car contact) (cadr contact))))
-	(content (mpdired--parse-listall)))
-    (with-current-buffer out
+  (let* ((peer-info (process-contact proc t))
+	 (peer-host (plist-get peer-info :host))
+	 (peer-service (plist-get peer-info :service))
+	 (peer-localp (eq (plist-get peer-info :family) 'local))
+	 (buffer-name (mpdired--browser-name peer-host peer-service peer-localp))
+	 (content (mpdired--parse-listall)))
+    (with-current-buffer (get-buffer-create buffer-name)
       (let ((inhibit-read-only t))
 	(erase-buffer)
 	(save-excursion
@@ -95,7 +109,7 @@
 	(if moving (goto-char (process-mark proc)))
 	(when (re-search-backward "^OK$" nil t)
 	  (when (eq mpdired--last-command 'listall)
-	    (mpdired--present-listall (process-contact proc))))))))
+	    (mpdired--present-listall proc)))))))
 
 (defun mpdired--sentinel (process event)
   ;; Do not signal a closed connection
@@ -106,11 +120,6 @@
   ;; Hack: if the `expand-file-name' of host leads to an existing
   ;; file, that should be our Unix socket.
   (file-exists-p (expand-file-name host)))
-
-(defun mpdired--comm-name (host service localp)
-  (if localp
-      (format "*mpdired-%s" host)
-    (format "*mpdired-%s:%s" host service)))
 
 (defun mpdired--maybe-init (host service localp)
   (with-current-buffer (get-buffer-create (mpdired--comm-name host service localp))
