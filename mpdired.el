@@ -101,38 +101,43 @@
   (unless (string-search "connection broken" event)
     (message "Process: %s had the event '%s'" process event)))
 
-(defvar mpdired-process nil)
-
-(defun mpdired-local-p (host)
+(defun mpdired--local-p (host)
   ;; Hack: if the `expand-file-name' of host leads to an existing
   ;; file, that should be our Unix socket.
   (file-exists-p (expand-file-name host)))
 
-(defun mpdired--maybe-init ()
-  ;; Always reparse host should the user have changed it.
-  (let* ((localp (mpdired-local-p mpdired-host))
-	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
-	 (service (if localp host mpdired-port)))
-    (with-current-buffer (get-buffer-create "*mpdired-work*")
-      (setq-local buffer-read-only nil)
-      (erase-buffer)
+(defun mpdired--comm-name (host service localp)
+  (if localp
+      (format "*mpdired-%s" host)
+    (format "*mpdired-%s:%s" host service)))
+
+(defun mpdired--maybe-init (host service localp)
+  (with-current-buffer (get-buffer-create (mpdired--comm-name host service localp))
+    (setq-local buffer-read-only nil)
+    (erase-buffer)
+    (let ((process (get-buffer-process (current-buffer))))
       ;; Create a new connection if needed
-      (unless (and mpdired-process
-		   (eq (process-status mpdired-process) 'open))
-	(setq mpdired-process (make-network-process :name "mpdired"
-						    :buffer (current-buffer)
-						    :host host
-						    :service service
-						    :family (if localp 'local)
-						    :coding 'utf-8
-						    :filter 'my-filter
-						    :sentinel 'msg-me))))))
+      (unless (and process
+		   (eq (process-status process) 'open))
+	(set-process-buffer (make-network-process :name "mpdired"
+						  :buffer (current-buffer)
+						  :host host
+						  :service service
+						  :family (if localp 'local)
+						  :coding 'utf-8
+						  :filter 'my-filter
+						  :sentinel 'msg-me)
+			    (current-buffer))))))
 
 (defun mpdired-listall (path)
-  (mpdired--maybe-init)
-  (with-current-buffer "*mpdired-work*"
-    (setq-local mpdired--last-command 'listall)
-    (process-send-string mpdired-process (format "listall \"%s\"\n" path))))
+  ;; Always reparse host should the user have changed it.
+  (let* ((localp (mpdired--local-p mpdired-host))
+	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
+	 (service (if localp host mpdired-port)))
+    (mpdired--maybe-init host service localp)
+    (with-current-buffer (mpdired--comm-name host service localp)
+      (setq-local mpdired--last-command 'listall)
+      (process-send-string (get-buffer-process (current-buffer)) (format "listall \"%s\"\n" path)))))
 
 (defun mpdired-test-me ()
   (interactive)
