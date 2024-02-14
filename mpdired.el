@@ -52,6 +52,7 @@
   (goto-char (point-min))
   (setq mpdired--parse-end nil)
   ;; XXX Empty string is the directory name of the toplevel directory.
+  ;; It have the good property of being a prefix of any string.
   (mpdired--parse-listall-1 "" (list "")))
 
 (defun mpdired-browse-mode ()
@@ -79,9 +80,12 @@
 (defvar-local mpdired--previous-directory nil)
 
 (defun mpdired--insert-file/dir (element)
-  (cond ((stringp element) (insert element))
+  (cond ((stringp element)
+	 (insert element)
+	 (put-text-property (line-beginning-position) (line-end-position) 'type 'file))
 	((consp element)
-	 (insert (propertize (car element) 'face 'dired-directory)))))
+	 (insert (propertize (car element) 'face 'dired-directory))
+	 (put-text-property (line-beginning-position) (line-end-position) 'type 'directory))))
 
 (defun mpdired--present-listall (proc)
   ;; Called from *mpdired-work*
@@ -188,8 +192,12 @@
 
 (defun mpdired-listall-at-point ()
   (interactive)
-  (re-search-forward "^\\(.*\\)$" (line-end-position) t)
-  (mpdired-listall (match-string 1) mpdired--directory))
+  (goto-char (line-beginning-position))
+  (save-excursion
+    (re-search-forward "^\\(.*\\)$" (line-end-position) t))
+  (if (eq (get-text-property (line-beginning-position) 'type) 'directory)
+      (mpdired-listall (match-string 1) mpdired--directory)
+    (message "Cannot browse a file.")))
 
 (defun mpdired--unsplit (list separator)
   (let (res)
