@@ -4,6 +4,12 @@
 (defcustom mpdired-port (or (getenv "MPD_PORT") 6600)
   "Host for MPD.")
 
+(defvar-keymap mpdired-browse-mode-map
+  :doc "Local keymap for MPDired browser."
+  "n" 'next-line
+  "p" 'previous-line
+  "q" 'bury-buffer)
+
 (defun mpdired--subdir-p (dir-a dir-b)
   (let ((pos (string-search dir-a dir-b)))
     (and pos (zerop pos))))
@@ -46,23 +52,36 @@
   ;; XXX Empty string is the directory name of the toplevel directory.
   (mpdired--parse-listall-1 "" (list "")))
 
+(defun mpdired-browse-mode ()
+  "Major mode for MPDired browser."
+  (kill-all-local-variables)
+  (use-local-map mpdired-browse-mode-map)
+  (set-buffer-modified-p nil)
+  (setq major-mode 'mpdired-browse-mode
+	mode-name "MPDired Browse"
+	buffer-read-only t))
+
 (defun mpdired-present-listall (contact)
   ;; Called from *mpdired-work*
   (let ((out (get-buffer-create (format "*MPDired (%s:%d)*"
 					(car contact) (cadr contact))))
 	(content (mpdired--parse-listall)))
     (with-current-buffer out
-      (erase-buffer)
-      (save-excursion
-	(let* ((content (if (cddr content) content (cadr content)))
-	       (top (if (string= (car content) "")
-			"*toplevel*"
-		      (car content))))
-	  (insert (propertize top 'face 'bold) ":\n")
-	  (dolist (e (cdr content))
-	    (cond ((stringp e) (insert e))
-		  ((consp e) (insert (propertize (car e) 'face 'dired-directory))))
-	    (insert "\n")))))))
+      (let ((inhibit-read-only t))
+	(erase-buffer)
+	(save-excursion
+	  ;; `content' is always of the form ("" rest...) so if there
+	  ;; is only one "rest" use it as content.
+	  (let* ((content (if (cddr content) content (cadr content)))
+		 (top (if (string= (car content) "")
+			  "*toplevel*"
+			(car content))))
+	    (insert (propertize top 'face 'bold) ":\n")
+	    (dolist (e (cdr content))
+	      (cond ((stringp e) (insert e))
+		    ((consp e) (insert (propertize (car e) 'face 'dired-directory))))
+	      (insert "\n")))))
+      (mpdired-browse-mode))))
 
 (defun my-filter (proc string)
   (when (buffer-live-p (process-buffer proc))
@@ -76,8 +95,7 @@
 	(if moving (goto-char (process-mark proc)))
 	(when (re-search-backward "^OK$" nil t)
 	  (when (eq mpdired--last-command 'listall)
-	    (mpdired-present-listall (process-contact proc)))
-	  (set-buffer-modified-p nil))))))
+	    (mpdired-present-listall (process-contact proc))))))))
 
 (defun msg-me (process event)
   (unless (string-search "connection broken" event)
@@ -91,19 +109,20 @@
   (file-exists-p (expand-file-name host)))
 
 (defun mpdired--maybe-init ()
-  (with-current-buffer (get-buffer-create "*mpdired-work*")
-    (setq-local buffer-read-only nil)
-    (erase-buffer)
-    ;; Always reparse host should the user have changed it.
-    (let* ((localp (mpdired-local-p mpdired-host))
-	   (host (if localp (expand-file-name mpdired-host) mpdired-host)))
+  ;; Always reparse host should the user have changed it.
+  (let* ((localp (mpdired-local-p mpdired-host))
+	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
+	 (service (if localp host mpdired-port)))
+    (with-current-buffer (get-buffer-create "*mpdired-work*")
+      (setq-local buffer-read-only nil)
+      (erase-buffer)
       ;; Create a new connection if needed
       (unless (and mpdired-process
 		   (eq (process-status mpdired-process) 'open))
 	(setq mpdired-process (make-network-process :name "mpdired"
 						    :buffer (current-buffer)
 						    :host host
-						    :service (if localp host mpdired-port)
+						    :service service
 						    :family (if localp 'local)
 						    :coding 'utf-8
 						    :filter 'my-filter
