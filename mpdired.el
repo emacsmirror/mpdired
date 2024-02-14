@@ -74,7 +74,14 @@
 (defun mpdired--browser-name (host service localp)
   (format "*MPDired Browser (%s)*" (mpdired--hostname host service localp)))
 
-(defvar mpdired--directory nil)
+(defvar-local mpdired--directory nil)
+(defvar-local mpdired--last-command nil)
+(defvar-local mpdired--previous-directory nil)
+
+(defun mpdired--insert-file/dir (element)
+  (cond ((stringp element) (insert element))
+	((consp element)
+	 (insert (propertize (car element) 'face 'dired-directory)))))
 
 (defun mpdired--present-listall (proc)
   ;; Called from *mpdired-work*
@@ -82,6 +89,8 @@
 	 (peer-host (plist-get peer-info :host))
 	 (peer-service (plist-get peer-info :service))
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
+	 (from-directory (with-current-buffer (process-buffer proc)
+			   mpdired--previous-directory))
 	 (buffer-name (mpdired--browser-name peer-host peer-service peer-localp))
 	 (content (mpdired--parse-listall)))
     (with-current-buffer (get-buffer-create buffer-name)
@@ -92,16 +101,23 @@
 	(let* ((content (if (cddr content) content (cadr content)))
 	       (top (if (string= (car content) "")
 			"*toplevel*"
-		      (car content))))
+		      (car content)))
+	       (data (cdr content)))
+	  ;; Insert the content
 	  (save-excursion
 	    (insert (propertize top 'face 'bold) ":\n")
-	    (dolist (e (cdr content))
-	      (cond ((stringp e) (insert e))
-		    ((consp e) (insert (propertize (car e) 'face 'dired-directory))))
-	      (insert "\n")))
+	    (dolist (e (butlast data))
+	      (mpdired--insert-file/dir e)
+	      (insert "\n"))
+	    (mpdired--insert-file/dir (car (last data))))
+	  ;; Go to the previous directory line
+	  (when from-directory
+	    (goto-char (point-min))
+	    (re-search-forward from-directory nil t)
+	    (goto-char (line-beginning-position)))
 	  ;; Set mode and memorize directory
 	  (mpdired-browse-mode)
-	  (setq-local mpdired--directory top))))))
+	  (setq-local mpdired--directory (unless (string= top "*toplevel*") top)))))))
 
 (defun mpdired--filter (proc string)
   (when (buffer-live-p (process-buffer proc))
@@ -113,6 +129,7 @@
 	  (insert string)
 	  (set-marker (process-mark proc) (point)))
 	(if moving (goto-char (process-mark proc)))
+	;; The server has done its work.
 	(when (re-search-backward "^OK$" nil t)
 	  (when (eq mpdired--last-command 'listall)
 	    (mpdired--present-listall proc)))))))
@@ -145,7 +162,7 @@
 						  :sentinel 'mpdired--sentinel)
 			    (current-buffer))))))
 
-(defun mpdired-listall (path)
+(defun mpdired-listall (path &optional from)
   ;; Always reparse host should the user have changed it.
   (let* ((localp (mpdired--local-p mpdired-host))
 	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
@@ -153,20 +170,24 @@
     (mpdired--maybe-init host service localp)
     (with-current-buffer (mpdired--comm-name host service localp)
       (setq-local mpdired--last-command 'listall)
+      (when from
+	(setq-local mpdired--previous-directory from))
       (process-send-string (get-buffer-process (current-buffer)) (format "listall \"%s\"\n" path)))))
 
 (defun mpdired-next-line ()
   (interactive)
-  (next-line))
+  (next-line)
+  (goto-char (line-beginning-position)))
 
 (defun mpdired-previous-line ()
   (interactive)
-  (previous-line))
+  (previous-line)
+  (goto-char (line-beginning-position)))
 
 (defun mpdired-listall-at-point ()
   (interactive)
   (re-search-forward "^\\(.*\\)$" (line-end-position) t)
-  (mpdired-listall (match-string 1)))
+  (mpdired-listall (match-string 1) mpdired--directory))
 
 (defun mpdired--unsplit (list separator)
   (let (res)
@@ -184,7 +205,7 @@
 
 (defun mpdired-goto-parent ()
   (interactive)
-  (mpdired-listall (mpdired--parent)))
+  (mpdired-listall (mpdired--parent) mpdired--directory))
 
 (defun mpdired-test-me ()
   (interactive)
