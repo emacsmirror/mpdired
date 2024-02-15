@@ -182,12 +182,12 @@
 
 (defun mpdired-next-line ()
   (interactive)
-  (next-line)
+  (forward-line)
   (goto-char (line-beginning-position)))
 
 (defun mpdired-previous-line ()
   (interactive)
-  (previous-line)
+  (forward-line -1)
   (goto-char (line-beginning-position)))
 
 (defun mpdired-listall-at-point ()
