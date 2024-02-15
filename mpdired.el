@@ -16,7 +16,13 @@
   (let ((pos (string-search dir-a dir-b)))
     (and pos (zerop pos))))
 
-(defvar mpdired--parse-end nil)
+;; State variables for the communication buffer
+(defvar-local mpdired--network-params nil)
+(defvar-local mpdired--parse-endp nil)
+(defvar-local mpdired--last-command nil)
+(defvar-local mpdired--previous-directory nil
+  "Previous directory used to pass to the browser buffer.")
+(defvar-local mpdired--ascending-p nil)
 
 (defun mpdired--parse-listall-1 (current accum)
   ;; Recursively rebuild the directory hierarchy from a "listall"
@@ -24,8 +30,8 @@
   ;; `car' is its name and its `cdr' is the files or other directory
   ;; it contains.
   (catch 'exit
-    (while (not (or mpdired--parse-end
-		    (setq mpdired--parse-end
+    (while (not (or mpdired--parse-endp
+		    (setq mpdired--parse-endp
 			  (re-search-forward "^OK$" (line-end-position) t 1))))
       ;; Look for file or directory line by line (I'm not interested
       ;; in playlist)
@@ -50,7 +56,7 @@
 (defun mpdired--parse-listall ()
   ;; Called from *mpdired-work*
   (goto-char (point-min))
-  (setq mpdired--parse-end nil)
+  (setq mpdired--parse-endp nil)
   ;; XXX Empty string is the directory name of the toplevel directory.
   ;; It have the good property of being a prefix of any string.
   (mpdired--parse-listall-1 "" (list "")))
@@ -75,16 +81,18 @@
 (defun mpdired--browser-name (host service localp)
   (format "*MPDired Browser (%s)*" (mpdired--hostname host service localp)))
 
-(defvar-local mpdired--directory nil)
-(defvar-local mpdired--last-command nil)
-(defvar-local mpdired--previous-directory nil)
+;; State variables for the browser
+(defvar-local mpdired--directory nil
+  "Current directory of the browser buffer.")
+(defvar-local mpdired--comm-buffer nil
+  "Communication buffer associated to this browser.")
 
-(defun mpdired--insert-file/dir (element)
-  (cond ((stringp element)
-	 (insert element)
+(defun mpdired--insert-entry (entry)
+  (cond ((stringp entry)
+	 (insert entry)
 	 (put-text-property (line-beginning-position) (line-end-position) 'type 'file))
-	((consp element)
-	 (insert (propertize (car element) 'face 'dired-directory))
+	((consp entry)
+	 (insert (propertize (car entry) 'face 'dired-directory))
 	 (put-text-property (line-beginning-position) (line-end-position) 'type 'directory))))
 
 (defun mpdired--present-listall (proc)
@@ -93,10 +101,13 @@
 	 (peer-host (plist-get peer-info :host))
 	 (peer-service (plist-get peer-info :service))
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
-	 (from-directory (with-current-buffer (process-buffer proc)
-			   mpdired--previous-directory))
 	 (buffer-name (mpdired--browser-name peer-host peer-service peer-localp))
-	 (content (mpdired--parse-listall)))
+	 (content (mpdired--parse-listall))
+	 from-directory ascending-p)
+    ;; Retrieve infos from this process buffer
+    (with-current-buffer (process-buffer proc)
+      (setq from-directory mpdired--previous-directory
+	    ascending-p mpdired--ascending-p))
     (with-current-buffer (get-buffer-create buffer-name)
       (let ((inhibit-read-only t))
 	(erase-buffer)
@@ -109,20 +120,21 @@
 	  (save-excursion
 	    (if top (insert (propertize top 'face 'bold) ":\n"))
 	    (dolist (e (butlast data))
-	      (mpdired--insert-file/dir e)
+	      (mpdired--insert-entry e)
 	      (insert "\n"))
-	    (mpdired--insert-file/dir (car (last data))))
-	  ;; Go to the previous directory line
-	  (cond (from-directory
+	    (mpdired--insert-entry (car (last data))))
+	  ;; Go to the previous directory line when ascending
+	  (cond (mpdired--ascending-p
 		 (goto-char (point-min))
 		 (re-search-forward from-directory nil t)
-		 (goto-char (line-beginning-position)))
+		 (goto-char (match-beginning 1)))
 		(t
 		 (goto-char (point-min))
 		 (if top (mpdired-next-line))))
 	  ;; Set mode and memorize directory
 	  (mpdired-browse-mode)
-	  (setq-local mpdired--directory (when top top)))))))
+	  (setq mpdired--directory (when top top)
+		mpdired--comm-buffer (process-buffer proc)))))))
 
 (defun mpdired--filter (proc string)
   (when (buffer-live-p (process-buffer proc))
@@ -149,36 +161,53 @@
   ;; file, that should be our Unix socket.
   (file-exists-p (expand-file-name host)))
 
+(defun mpdired--maybe-reconnect (comm-buffer)
+  (with-current-buffer comm-buffer)
+  (let ((process (get-buffer-process comm-buffer)))
+    (unless (and process (eq (process-status process) 'open))
+      ;; Reconnect from saved parameters.
+      (if mpdired--network-params
+	  (set-process-buffer (apply 'make-network-process mpdired--network-params)
+			      comm-buffer)))))
+
 (defun mpdired--maybe-init (host service localp)
   (with-current-buffer (get-buffer-create (mpdired--comm-name host service localp))
     (setq-local buffer-read-only nil)
     (erase-buffer)
     (let ((process (get-buffer-process (current-buffer))))
-      ;; Create a new connection if needed
-      (unless (and process
-		   (eq (process-status process) 'open))
-	(set-process-buffer (make-network-process :name "mpdired"
-						  :buffer (current-buffer)
-						  :host host
-						  :service service
-						  :family (if localp 'local)
-						  :coding 'utf-8
-						  :filter 'mpdired--filter
-						  :sentinel 'mpdired--sentinel)
-			    (current-buffer))))))
+      (unless (and process (eq (process-status process) 'open))
+	(let ((params (list :name "mpdired"
+			    :buffer (current-buffer)
+			    :host host
+			    :service service
+			    :family (if localp 'local)
+			    :coding 'utf-8
+			    :filter 'mpdired--filter
+			    :sentinel 'mpdired--sentinel)))
+	  (setq mpdired--network-params params)
+	  (set-process-buffer (apply 'make-network-process params)
+			      (current-buffer)))))))
 
-(defun mpdired-listall (path &optional from)
+(defun mpdired-listall-internal (path &optional ascending-p buffer)
+  (with-current-buffer (or buffer mpdired--comm-buffer)
+    (mpdired--maybe-reconnect (current-buffer))
+    (let ((process (get-buffer-process (current-buffer))))
+      (when (process-live-p process)
+	(erase-buffer)
+	(setq mpdired--last-command 'listall
+	      mpdired--previous-directory mpdired--directory
+	      mpdired--directory path
+	      mpdired--ascending-p ascending-p)
+	(process-send-string process (format "listall \"%s\"\n" path))))))
+
+(defun mpdired-listall (path)
   ;; Always reparse host should the user have changed it.
   (let* ((localp (mpdired--local-p mpdired-host))
 	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
-	 (service (if localp host mpdired-port)))
+	 (service (if localp host mpdired-port))
+	 (comm-name (mpdired--comm-name host service localp)))
     (mpdired--maybe-init host service localp)
-    (with-current-buffer (mpdired--comm-name host service localp)
-      (let ((process (get-buffer-process (current-buffer))))
-	(when (process-live-p process)
-	  (setq-local mpdired--last-command 'listall
-		      mpdired--previous-directory (when from from))
-	  (process-send-string process (format "listall \"%s\"\n" path)))))))
+    (mpdired-listall-internal path nil comm-name)))
 
 (defun mpdired-next-line ()
   (interactive)
@@ -196,7 +225,7 @@
   (save-excursion
     (re-search-forward "^\\(.*\\)$" (line-end-position) t))
   (if (eq (get-text-property (line-beginning-position) 'type) 'directory)
-      (mpdired-listall (match-string 1) mpdired--directory)
+      (mpdired-listall-internal (match-string 1))
     (message "Cannot browse a file.")))
 
 (defun mpdired--unsplit (list separator)
@@ -218,7 +247,7 @@
   (interactive)
   (let ((parent (mpdired--parent)))
     (if parent
-	(mpdired-listall parent mpdired--directory)
+	(mpdired-listall-internal parent t)
       (message "You are at the toplevel."))))
 
 (defun mpdired-test-me ()
