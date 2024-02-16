@@ -1,8 +1,10 @@
 (defcustom mpdired-host (or (getenv "MPD_HOST") "localhost")
-  "Host for MPD.")
+  "Host for MPD."
+  :type 'string)
 
 (defcustom mpdired-port (or (getenv "MPD_PORT") 6600)
-  "Host for MPD.")
+  "Host for MPD."
+  :type 'integer)
 
 (defvar-keymap mpdired-mode-map
   :doc "Local keymap for MPDired."
@@ -12,7 +14,8 @@
   "p"   'mpdired-previous-line
   "q"   'bury-buffer
   "C-m" 'mpdired-listall-at-point
-  "^"   'mpdired-goto-parent)
+  "^"   'mpdired-goto-parent
+  "o"   'mpdired-toggle-view)
 
 (defun mpdired--subdir-p (dir-a dir-b)
   (let ((pos (string-search dir-a dir-b)))
@@ -56,12 +59,28 @@
   (reverse accum))
 
 (defun mpdired--parse-listall ()
-  ;; Called from *mpdired-work*
+  ;; Called from the communication buffer.
   (goto-char (point-min))
   (setq mpdired--parse-endp nil)
   ;; XXX Empty string is the directory name of the toplevel directory.
   ;; It have the good property of being a prefix of any string.
   (mpdired--parse-listall-1 "" (list "")))
+
+(defun mpdired--parse-playlist ()
+  ;; Called from the communication buffer.
+  (goto-char (point-min))
+  (setq mpdired--parse-endp nil)
+  (let (result)
+    (while (not (or mpdired--parse-endp
+		    (setq mpdired--parse-endp
+			  (re-search-forward "^OK$" (line-end-position) t 1))))
+      ;; Look for file with id in the playlist
+      (when (re-search-forward "^\\([0-9]+\\):file: \\(.*\\)$" (line-end-position) t 1)
+	(let ((id (string-to-number (match-string 1)))
+	      (name (match-string 2)))
+	  (push (cons id name) result)))
+      (forward-line))
+    (reverse result)))
 
 (defun mpdired-mode ()
   "Major mode for MPDired."
@@ -88,6 +107,7 @@
   "Current directory of the browser view.")
 
 ;; State variables for the main buffer
+(defvar-local mpdired--view nil)
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
 
@@ -99,8 +119,12 @@
 	 (insert (propertize (car entry) 'face 'dired-directory))
 	 (put-text-property (line-beginning-position) (line-end-position) 'type 'directory))))
 
+(defun mpdired--insert-song (song)
+  (insert (propertize (cdr song) 'face 'dired-ignored))
+  (put-text-property (line-beginning-position) (line-end-position) 'id (car song)))
+
 (defun mpdired--present-listall (proc)
-  ;; Called from *mpdired-work*
+  ;; Called by filter of the communication buffer.
   (let* ((peer-info (process-contact proc t))
 	 (peer-host (plist-get peer-info :host))
 	 (peer-service (plist-get peer-info :service))
@@ -122,7 +146,7 @@
 	       (data (cdr content)))
 	  ;; Insert the content
 	  (save-excursion
-	    (if top (insert (propertize top 'face 'bold) ":\n"))
+	    (if top (insert (propertize top 'face 'dired-header) ":\n"))
 	    (dolist (e (butlast data))
 	      (mpdired--insert-entry e)
 	      (insert "\n"))
@@ -135,13 +159,33 @@
 		(t
 		 (goto-char (point-min))
 		 (if top (mpdired-next-line))))
-	  ;; Set mode and memorize directory
+	  ;; Set mode and memorize stuff
 	  (mpdired-mode)
 	  (setq mpdired--directory (when top top)
-		mpdired--comm-buffer (process-buffer proc)))))))
+		mpdired--comm-buffer (process-buffer proc)
+		mpdired--view 'browser))))))
 
-(defun mpdired--present-playlist ()
-  (message "I should do something"))
+(defun mpdired--present-playlist (proc)
+  ;; Called by filter of the communication buffer.
+  (let* ((peer-info (process-contact proc t))
+	 (peer-host (plist-get peer-info :host))
+	 (peer-service (plist-get peer-info :service))
+	 (peer-localp (eq (plist-get peer-info :family) 'local))
+	 (buffer-name (mpdired--main-name peer-host peer-service peer-localp))
+	 (content (mpdired--parse-playlist)))
+    (with-current-buffer (get-buffer-create buffer-name)
+      (let ((inhibit-read-only t))
+	(erase-buffer)
+	;; Insert the content
+	(save-excursion
+	  (dolist (song (butlast content))
+	    (mpdired--insert-song song)
+	    (insert "\n"))
+	  (mpdired--insert-song (car (last content))))
+	;; Set mode and memorize stuff
+	(mpdired-mode)
+	(setq mpdired--comm-buffer (process-buffer proc)
+	      mpdired--view 'playlist)))))
 
 (defun mpdired--filter (proc string)
   (when (buffer-live-p (process-buffer proc))
@@ -158,7 +202,7 @@
 	  (cond ((eq mpdired--last-command 'listall)
 		 (mpdired--present-listall proc))
 		((eq mpdired--last-command 'playlist)
-		 (mpdired--present-playlist))))))))
+		 (mpdired--present-playlist proc))))))))
 
 (defun mpdired--sentinel (process event)
   (message "Process: %s had the event '%s'" process event))
@@ -206,14 +250,8 @@
 	      mpdired--ascending-p ascending-p)
 	(process-send-string process (format "listall \"%s\"\n" path))))))
 
-(defun mpdired-listall (path)
-  ;; Always reparse host should the user have changed it.
-  (let* ((localp (mpdired--local-p mpdired-host))
-	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
-	 (service (if localp host mpdired-port))
-	 (comm-name (mpdired--comm-name host service localp)))
-    (mpdired--maybe-init host service localp)
-    (mpdired-listall-internal path nil comm-name)))
+(defun mpdired-listall (path comm-buffer)
+  (mpdired-listall-internal path nil comm-buffer))
 
 (defun mpdired-playlist-internal (&optional buffer)
   (with-current-buffer (or buffer mpdired--comm-buffer)
@@ -224,15 +262,8 @@
 	(setq mpdired--last-command 'playlist)
 	(process-send-string process "playlist\n")))))
 
-(defun mpdired-playlist ()
-  (interactive)
-  ;; Always reparse host should the user have changed it.
-  (let* ((localp (mpdired--local-p mpdired-host))
-	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
-	 (service (if localp host mpdired-port))
-	 (comm-name (mpdired--comm-name host service localp)))
-    (mpdired--maybe-init host service localp)
-    (mpdired-playlist-internal comm-name)))
+(defun mpdired-playlist (comm-buffer)
+  (mpdired-playlist-internal comm-buffer))
 
 (defun mpdired-next-line ()
   (interactive)
@@ -275,6 +306,24 @@
 	(mpdired-listall-internal parent t)
       (message "You are at the toplevel."))))
 
-(defun mpdired-test-me ()
+(defun mpdired-toggle-view ()
   (interactive)
-  (mpdired-listall ""))
+  (if (eq mpdired--view 'browser)
+      (mpdired-playlist-internal)
+    (if mpdired--directory
+	(mpdired-listall-internal mpdired--directory)
+      (mpdired-listall-internal ""))))
+
+;; Main entry point
+(defun mpdired ()
+  (interactive)
+  ;; Get user's host and service current setting.
+  (let* ((localp (mpdired--local-p mpdired-host))
+	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
+	 (service (if localp host mpdired-port))
+	 (comm-name (mpdired--comm-name host service localp))
+	 (main-name (mpdired--main-name host service localp)))
+    (mpdired--maybe-init host service localp)
+    ;; Defaults to playlist view
+    (mpdired-playlist comm-name)
+    (pop-to-buffer main-name)))
