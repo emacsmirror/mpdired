@@ -17,6 +17,7 @@
   "^"     'mpdired-goto-parent
   "o"     'mpdired-toggle-view
   "<SPC>" 'mpdired-toggle-play/pause
+  "a"     'mpdired-add-at-point
   "D"     'mpdired-delete
   "g"     'mpdired-update)
 
@@ -288,6 +289,15 @@
 	(setq mpdired--last-command 'playid)
 	(process-send-string process (format "playid %d\n" id))))))
 
+(defun mpdired-add-internal (uri)
+  (with-current-buffer mpdired--comm-buffer
+    (erase-buffer)
+    (mpdired--maybe-reconnect (current-buffer))
+    (let ((process (get-buffer-process (current-buffer))))
+      (when (process-live-p process)
+	(setq mpdired--last-command 'add)
+	(process-send-string process (format "add \"%s\"\n" uri))))))
+
 (defun mpdired-deleteid-internal (id)
   (with-current-buffer mpdired--comm-buffer
     (erase-buffer)
@@ -378,6 +388,15 @@
 (defun mpdired-toggle-play/pause ()
   (interactive)
   (mpdired-toggle-play/pause-internal))
+
+(defun mpdired-add-at-point ()
+  (interactive)
+  (goto-char (line-beginning-position))
+  (save-excursion
+    (re-search-forward "^\\(.*\\)$" (line-end-position) t))
+  (let ((uri (match-string 1)))
+    (when uri
+      (mpdired-add-internal uri))))
 
 (defun mpdired-deleteid-at-point ()
   (let ((id (get-text-property (line-beginning-position) 'id)))
