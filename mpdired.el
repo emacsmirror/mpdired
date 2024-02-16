@@ -140,6 +140,9 @@
 	  (setq mpdired--directory (when top top)
 		mpdired--comm-buffer (process-buffer proc)))))))
 
+(defun mpdired--present-playlist ()
+  (message "I should do something"))
+
 (defun mpdired--filter (proc string)
   (when (buffer-live-p (process-buffer proc))
     (with-current-buffer (process-buffer proc)
@@ -152,13 +155,13 @@
 	(if moving (goto-char (process-mark proc)))
 	;; The server has done its work.
 	(when (re-search-backward "^OK$" nil t)
-	  (when (eq mpdired--last-command 'listall)
-	    (mpdired--present-listall proc)))))))
+	  (cond ((eq mpdired--last-command 'listall)
+		 (mpdired--present-listall proc))
+		((eq mpdired--last-command 'playlist)
+		 (mpdired--present-playlist))))))))
 
 (defun mpdired--sentinel (process event)
-  ;; Do not signal a closed connection
-  (unless (string-search "connection broken" event)
-    (message "Process: %s had the event '%s'" process event)))
+  (message "Process: %s had the event '%s'" process event))
 
 (defun mpdired--local-p (host)
   ;; Hack: if the `expand-file-name' of host leads to an existing
@@ -211,6 +214,25 @@
 	 (comm-name (mpdired--comm-name host service localp)))
     (mpdired--maybe-init host service localp)
     (mpdired-listall-internal path nil comm-name)))
+
+(defun mpdired-playlist-internal (&optional buffer)
+  (with-current-buffer (or buffer mpdired--comm-buffer)
+    (mpdired--maybe-reconnect (current-buffer))
+    (let ((process (get-buffer-process (current-buffer))))
+      (when (process-live-p process)
+	(erase-buffer)
+	(setq mpdired--last-command 'playlist)
+	(process-send-string process "playlist\n")))))
+
+(defun mpdired-playlist ()
+  (interactive)
+  ;; Always reparse host should the user have changed it.
+  (let* ((localp (mpdired--local-p mpdired-host))
+	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
+	 (service (if localp host mpdired-port))
+	 (comm-name (mpdired--comm-name host service localp)))
+    (mpdired--maybe-init host service localp)
+    (mpdired-playlist-internal comm-name)))
 
 (defun mpdired-next-line ()
   (interactive)
