@@ -254,76 +254,55 @@
 	  (set-process-buffer (apply 'make-network-process params)
 			      (current-buffer)))))))
 
-(defun mpdired-listall-internal (path &optional ascending-p buffer)
-  (with-current-buffer (or buffer mpdired--comm-buffer)
-    (erase-buffer)
-    (mpdired--maybe-reconnect (current-buffer))
-    (let ((process (get-buffer-process (current-buffer))))
-      (when (process-live-p process)
-	(setq mpdired--last-command 'listall
-	      mpdired--previous-directory mpdired--directory
-	      mpdired--ascending-p ascending-p)
-	(process-send-string process (format "listall \"%s\"\n" path))))))
+(defmacro mpdired--with-comm-buffer (process buffer &rest body)
+  "Helper macro when sending a command via the communication buffer."
+  (declare (indent defun))
+  `(with-current-buffer (or ,buffer mpdired--comm-buffer)
+     (erase-buffer)
+     (mpdired--maybe-reconnect (current-buffer))
+     (let ((,process (get-buffer-process (current-buffer))))
+       (when (process-live-p ,process)
+	 ,@body))))
 
-(defun mpdired-listall (path comm-buffer)
-  (mpdired-listall-internal path nil comm-buffer))
+(defun mpdired-listall-internal (path &optional ascending-p)
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'listall
+	  mpdired--previous-directory mpdired--directory
+	  mpdired--ascending-p ascending-p)
+    (process-send-string process (format "listall \"%s\"\n" path))))
 
 (defun mpdired-playlist-internal (&optional buffer)
-  (with-current-buffer (or buffer mpdired--comm-buffer)
-    (erase-buffer)
-    (mpdired--maybe-reconnect (current-buffer))
-    (let ((process (get-buffer-process (current-buffer))))
-      (when (process-live-p process)
-	(setq mpdired--last-command 'playlist)
-	(process-send-string process "playlistid\n")))))
+  (mpdired--with-comm-buffer process buffer
+    (setq mpdired--last-command 'playlist)
+    (process-send-string process "playlistid\n")))
 
 (defun mpdired-playlist (comm-buffer)
   (mpdired-playlist-internal comm-buffer))
 
 (defun mpdired-playid-internal (id)
-  (with-current-buffer mpdired--comm-buffer
-    (erase-buffer)
-    (mpdired--maybe-reconnect (current-buffer))
-    (let ((process (get-buffer-process (current-buffer))))
-      (when (process-live-p process)
-	(setq mpdired--last-command 'playid)
-	(process-send-string process (format "playid %d\n" id))))))
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'playid)
+    (process-send-string process (format "playid %d\n" id))))
 
 (defun mpdired-add-internal (uri)
-  (with-current-buffer mpdired--comm-buffer
-    (erase-buffer)
-    (mpdired--maybe-reconnect (current-buffer))
-    (let ((process (get-buffer-process (current-buffer))))
-      (when (process-live-p process)
-	(setq mpdired--last-command 'add)
-	(process-send-string process (format "add \"%s\"\n" uri))))))
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'add)
+    (process-send-string process (format "add \"%s\"\n" uri))))
 
 (defun mpdired-deleteid-internal (id)
-  (with-current-buffer mpdired--comm-buffer
-    (erase-buffer)
-    (mpdired--maybe-reconnect (current-buffer))
-    (let ((process (get-buffer-process (current-buffer))))
-      (when (process-live-p process)
-	(setq mpdired--last-command 'deleteid)
-	(process-send-string process (format "deleteid %d\n" id))))))
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'deleteid)
+    (process-send-string process (format "deleteid %d\n" id))))
 
 (defun mpdired-toggle-play/pause-internal (&optional buffer)
-  (with-current-buffer (or buffer mpdired--comm-buffer)
-    (erase-buffer)
-    (mpdired--maybe-reconnect (current-buffer))
-    (let ((process (get-buffer-process (current-buffer))))
-      (when (process-live-p process)
-	(setq mpdired--last-command 'pause)
-	(process-send-string process "pause\n")))))
+  (mpdired--with-comm-buffer process buffer
+    (setq mpdired--last-command 'pause)
+    (process-send-string process "pause\n")))
 
-(defun mpdired-status-internal (&optional buffer)
-  (with-current-buffer (or buffer mpdired--comm-buffer)
-    (erase-buffer)
-    (mpdired--maybe-reconnect (current-buffer))
-    (let ((process (get-buffer-process (current-buffer))))
-      (when (process-live-p process)
-	(setq mpdired--last-command 'status)
-	(process-send-string process "status\n")))))
+(defun mpdired-status-internal ()
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'status)
+    (process-send-string process "status\n")))
 
 (defun mpdired-next-line ()
   (interactive)
