@@ -83,9 +83,11 @@
 (defun mpdired--browser-name (host service localp)
   (format "*MPDired Browser (%s)*" (mpdired--hostname host service localp)))
 
-;; State variables for the browser
-(defvar-local mpdired--directory nil
+;; Global state variables.
+(defvar mpdired--directory nil
   "Current directory of the browser buffer.")
+
+;; State variables for the browser
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this browser.")
 
@@ -198,7 +200,6 @@
 	(erase-buffer)
 	(setq mpdired--last-command 'listall
 	      mpdired--previous-directory mpdired--directory
-	      mpdired--directory path
 	      mpdired--ascending-p ascending-p)
 	(process-send-string process (format "listall \"%s\"\n" path))))))
 
