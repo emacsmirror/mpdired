@@ -4,8 +4,8 @@
 (defcustom mpdired-port (or (getenv "MPD_PORT") 6600)
   "Host for MPD.")
 
-(defvar-keymap mpdired-browse-mode-map
-  :doc "Local keymap for MPDired browser."
+(defvar-keymap mpdired-mode-map
+  :doc "Local keymap for MPDired."
   "C-n" 'mpdired-next-line
   "n"   'mpdired-next-line
   "C-p" 'mpdired-previous-line
@@ -23,7 +23,7 @@
 (defvar-local mpdired--parse-endp nil)
 (defvar-local mpdired--last-command nil)
 (defvar-local mpdired--previous-directory nil
-  "Previous directory used to pass to the browser buffer.")
+  "Previous directory used to pass to the MPDired buffer.")
 (defvar-local mpdired--ascending-p nil)
 
 (defun mpdired--parse-listall-1 (current accum)
@@ -63,13 +63,13 @@
   ;; It have the good property of being a prefix of any string.
   (mpdired--parse-listall-1 "" (list "")))
 
-(defun mpdired-browse-mode ()
-  "Major mode for MPDired browser."
+(defun mpdired-mode ()
+  "Major mode for MPDired."
   (kill-all-local-variables)
-  (use-local-map mpdired-browse-mode-map)
+  (use-local-map mpdired-mode-map)
   (set-buffer-modified-p nil)
-  (setq major-mode 'mpdired-browse-mode
-	mode-name "MPDired Browse"
+  (setq major-mode 'mpdired-mode
+	mode-name "MPDired"
 	buffer-read-only t))
 
 (defun mpdired--hostname (host service localp)
@@ -80,16 +80,16 @@
 (defun mpdired--comm-name (host service localp)
   (format "*mpdired-%s*" (mpdired--hostname host service localp)))
 
-(defun mpdired--browser-name (host service localp)
-  (format "*MPDired Browser (%s)*" (mpdired--hostname host service localp)))
+(defun mpdired--main-name (host service localp)
+  (format "*MPDired (%s)*" (mpdired--hostname host service localp)))
 
 ;; Global state variables.
 (defvar mpdired--directory nil
-  "Current directory of the browser buffer.")
+  "Current directory of the browser view.")
 
-;; State variables for the browser
+;; State variables for the main buffer
 (defvar-local mpdired--comm-buffer nil
-  "Communication buffer associated to this browser.")
+  "Communication buffer associated to this MPDired buffer.")
 
 (defun mpdired--insert-entry (entry)
   (cond ((stringp entry)
@@ -105,7 +105,7 @@
 	 (peer-host (plist-get peer-info :host))
 	 (peer-service (plist-get peer-info :service))
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
-	 (buffer-name (mpdired--browser-name peer-host peer-service peer-localp))
+	 (buffer-name (mpdired--main-name peer-host peer-service peer-localp))
 	 (content (mpdired--parse-listall))
 	 from-directory ascending-p)
     ;; Retrieve infos from this process buffer
@@ -136,7 +136,7 @@
 		 (goto-char (point-min))
 		 (if top (mpdired-next-line))))
 	  ;; Set mode and memorize directory
-	  (mpdired-browse-mode)
+	  (mpdired-mode)
 	  (setq mpdired--directory (when top top)
 		mpdired--comm-buffer (process-buffer proc)))))))
 
