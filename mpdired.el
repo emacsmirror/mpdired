@@ -6,7 +6,9 @@
 
 (defvar-keymap mpdired-browse-mode-map
   :doc "Local keymap for MPDired browser."
+  "C-n" 'mpdired-next-line
   "n"   'mpdired-next-line
+  "C-p" 'mpdired-previous-line
   "p"   'mpdired-previous-line
   "q"   'bury-buffer
   "C-m" 'mpdired-listall-at-point
@@ -124,10 +126,10 @@
 	      (insert "\n"))
 	    (mpdired--insert-entry (car (last data))))
 	  ;; Go to the previous directory line when ascending
-	  (cond (mpdired--ascending-p
+	  (cond (ascending-p
 		 (goto-char (point-min))
 		 (re-search-forward from-directory nil t)
-		 (goto-char (match-beginning 1)))
+		 (goto-char (line-beginning-position)))
 		(t
 		 (goto-char (point-min))
 		 (if top (mpdired-next-line))))
