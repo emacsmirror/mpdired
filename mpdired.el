@@ -9,9 +9,9 @@
 (defvar-keymap mpdired-mode-map
   :doc "Local keymap for MPDired."
   "C-n"   'mpdired-next-line
-  "n"     'mpdired-next-line
+  "n"     'mpdired-next
   "C-p"   'mpdired-previous-line
-  "p"     'mpdired-previous-line
+  "p"     'mpdired-previous
   "q"     'bury-buffer
   "C-m"   'mpdired-enter
   "^"     'mpdired-goto-parent
@@ -299,6 +299,16 @@
     (setq mpdired--last-command 'pause)
     (process-send-string process "pause\n")))
 
+(defun mpdired-next-internal (&optional buffer)
+  (mpdired--with-comm-buffer process buffer
+    (setq mpdired--last-command 'next)
+    (process-send-string process "next\n")))
+
+(defun mpdired-previous-internal (&optional buffer)
+  (mpdired--with-comm-buffer process buffer
+    (setq mpdired--last-command 'previous)
+    (process-send-string process "previous\n")))
+
 (defun mpdired-status-internal ()
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'status)
@@ -396,6 +406,20 @@
 	 (if mpdired--directory
 	     (mpdired-listall-internal mpdired--directory)
 	   (mpdired-listall-internal "")))))
+
+(defun mpdired-next ()
+  (interactive)
+  (cond ((eq mpdired--view 'browser)
+	 (mpdired-next-line))
+	((eq mpdired--view 'playlist)
+	 (mpdired-next-internal))))
+
+(defun mpdired-previous ()
+  (interactive)
+  (cond ((eq mpdired--view 'browser)
+	 (mpdired-previous-line))
+	((eq mpdired--view 'playlist)
+	 (mpdired-previous-internal))))
 
 ;; Main entry point
 (defun mpdired ()
