@@ -8,14 +8,17 @@
 
 (defvar-keymap mpdired-mode-map
   :doc "Local keymap for MPDired."
-  "C-n" 'mpdired-next-line
-  "n"   'mpdired-next-line
-  "C-p" 'mpdired-previous-line
-  "p"   'mpdired-previous-line
-  "q"   'bury-buffer
-  "C-m" 'mpdired-listall-at-point
-  "^"   'mpdired-goto-parent
-  "o"   'mpdired-toggle-view)
+  "C-n"   'mpdired-next-line
+  "n"     'mpdired-next-line
+  "C-p"   'mpdired-previous-line
+  "p"     'mpdired-previous-line
+  "q"     'bury-buffer
+  "C-m"   'mpdired-enter
+  "^"     'mpdired-goto-parent
+  "o"     'mpdired-toggle-view
+  "<SPC>" 'mpdired-toggle-play/pause
+  "D"     'mpdired-delete
+  "g"     'mpdired-update)
 
 (defun mpdired--subdir-p (dir-a dir-b)
   (let ((pos (string-search dir-a dir-b)))
@@ -66,20 +69,32 @@
   ;; It have the good property of being a prefix of any string.
   (mpdired--parse-listall-1 "" (list "")))
 
+;; All my functions are called *-playlist but the correct "playlistid"
+;; MPD interface is used.
 (defun mpdired--parse-playlist ()
   ;; Called from the communication buffer.
   (goto-char (point-min))
   (setq mpdired--parse-endp nil)
-  (let (result)
+  (let (result file time id)
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
 			  (re-search-forward "^OK$" (line-end-position) t 1))))
-      ;; Look for file with id in the playlist
-      (when (re-search-forward "^\\([0-9]+\\):file: \\(.*\\)$" (line-end-position) t 1)
-	(let ((id (string-to-number (match-string 1)))
-	      (name (match-string 2)))
-	  (push (cons id name) result)))
+      ;; File
+      (when (re-search-forward "^file: \\(.*\\)$" (line-end-position) t 1)
+	;; if file is already set store the previous entry in the
+	;; list.
+	(when file
+	  (push (list id file time) result))
+	(setq file (match-string 1)))
+      ;; Time
+      (when (re-search-forward "^Time: \\(.*\\)$" (line-end-position) t 1)
+	(setq time (string-to-number (match-string 1))))
+      ;; Id
+      (when (re-search-forward "^Id: \\(.*\\)$" (line-end-position) t 1)
+	(setq id (string-to-number (match-string 1))))
       (forward-line))
+    ;; The last one
+    (when file (push (list id file time) result))
     (reverse result)))
 
 (defun mpdired-mode ()
@@ -120,7 +135,7 @@
 	 (put-text-property (line-beginning-position) (line-end-position) 'type 'directory))))
 
 (defun mpdired--insert-song (song)
-  (insert (propertize (cdr song) 'face 'dired-ignored))
+  (insert (propertize (cadr song) 'face 'dired-ignored))
   (put-text-property (line-beginning-position) (line-end-position) 'id (car song)))
 
 (defun mpdired--present-listall (proc)
@@ -181,7 +196,8 @@
 	  (dolist (song (butlast content))
 	    (mpdired--insert-song song)
 	    (insert "\n"))
-	  (mpdired--insert-song (car (last content))))
+	  (when content
+	    (mpdired--insert-song (car (last content)))))
 	;; Set mode and memorize stuff
 	(mpdired-mode)
 	(setq mpdired--comm-buffer (process-buffer proc)
@@ -213,7 +229,6 @@
   (file-exists-p (expand-file-name host)))
 
 (defun mpdired--maybe-reconnect (comm-buffer)
-  (with-current-buffer comm-buffer)
   (let ((process (get-buffer-process comm-buffer)))
     (unless (and process (eq (process-status process) 'open))
       ;; Reconnect from saved parameters.
@@ -223,7 +238,6 @@
 
 (defun mpdired--maybe-init (host service localp)
   (with-current-buffer (get-buffer-create (mpdired--comm-name host service localp))
-    (setq-local buffer-read-only nil)
     (erase-buffer)
     (let ((process (get-buffer-process (current-buffer))))
       (unless (and process (eq (process-status process) 'open))
@@ -241,10 +255,10 @@
 
 (defun mpdired-listall-internal (path &optional ascending-p buffer)
   (with-current-buffer (or buffer mpdired--comm-buffer)
+    (erase-buffer)
     (mpdired--maybe-reconnect (current-buffer))
     (let ((process (get-buffer-process (current-buffer))))
       (when (process-live-p process)
-	(erase-buffer)
 	(setq mpdired--last-command 'listall
 	      mpdired--previous-directory mpdired--directory
 	      mpdired--ascending-p ascending-p)
@@ -255,15 +269,51 @@
 
 (defun mpdired-playlist-internal (&optional buffer)
   (with-current-buffer (or buffer mpdired--comm-buffer)
+    (erase-buffer)
     (mpdired--maybe-reconnect (current-buffer))
     (let ((process (get-buffer-process (current-buffer))))
       (when (process-live-p process)
-	(erase-buffer)
 	(setq mpdired--last-command 'playlist)
-	(process-send-string process "playlist\n")))))
+	(process-send-string process "playlistid\n")))))
 
 (defun mpdired-playlist (comm-buffer)
   (mpdired-playlist-internal comm-buffer))
+
+(defun mpdired-playid-internal (id)
+  (with-current-buffer mpdired--comm-buffer
+    (erase-buffer)
+    (mpdired--maybe-reconnect (current-buffer))
+    (let ((process (get-buffer-process (current-buffer))))
+      (when (process-live-p process)
+	(setq mpdired--last-command 'playid)
+	(process-send-string process (format "playid %d\n" id))))))
+
+(defun mpdired-deleteid-internal (id)
+  (with-current-buffer mpdired--comm-buffer
+    (erase-buffer)
+    (mpdired--maybe-reconnect (current-buffer))
+    (let ((process (get-buffer-process (current-buffer))))
+      (when (process-live-p process)
+	(setq mpdired--last-command 'deleteid)
+	(process-send-string process (format "deleteid %d\n" id))))))
+
+(defun mpdired-toggle-play/pause-internal (&optional buffer)
+  (with-current-buffer (or buffer mpdired--comm-buffer)
+    (erase-buffer)
+    (mpdired--maybe-reconnect (current-buffer))
+    (let ((process (get-buffer-process (current-buffer))))
+      (when (process-live-p process)
+	(setq mpdired--last-command 'pause)
+	(process-send-string process "pause\n")))))
+
+(defun mpdired-status-internal (&optional buffer)
+  (with-current-buffer (or buffer mpdired--comm-buffer)
+    (erase-buffer)
+    (mpdired--maybe-reconnect (current-buffer))
+    (let ((process (get-buffer-process (current-buffer))))
+      (when (process-live-p process)
+	(setq mpdired--last-command 'status)
+	(process-send-string process "status\n")))))
 
 (defun mpdired-next-line ()
   (interactive)
@@ -276,13 +326,23 @@
   (goto-char (line-beginning-position)))
 
 (defun mpdired-listall-at-point ()
-  (interactive)
   (goto-char (line-beginning-position))
   (save-excursion
     (re-search-forward "^\\(.*\\)$" (line-end-position) t))
   (if (eq (get-text-property (line-beginning-position) 'type) 'directory)
       (mpdired-listall-internal (match-string 1))
     (message "Cannot browse a file.")))
+
+(defun mpdired-playid-at-point ()
+  (let ((id (get-text-property (line-beginning-position) 'id)))
+    (when id
+      (mpdired-playid-internal id))))
+
+(defun mpdired-enter ()
+  (interactive)
+  (if (eq mpdired--view 'browser)
+      (mpdired-listall-at-point)
+    (mpdired-playid-at-point)))
 
 (defun mpdired--unsplit (list separator)
   (let (res)
@@ -308,11 +368,36 @@
 
 (defun mpdired-toggle-view ()
   (interactive)
-  (if (eq mpdired--view 'browser)
-      (mpdired-playlist-internal)
-    (if mpdired--directory
-	(mpdired-listall-internal mpdired--directory)
-      (mpdired-listall-internal ""))))
+  (cond ((eq mpdired--view 'browser)
+	 (mpdired-playlist-internal))
+	((eq mpdired--view 'playlist)
+	 (if mpdired--directory
+	     (mpdired-listall-internal mpdired--directory)
+	   (mpdired-listall-internal "")))))
+
+(defun mpdired-toggle-play/pause ()
+  (interactive)
+  (mpdired-toggle-play/pause-internal))
+
+(defun mpdired-deleteid-at-point ()
+  (let ((id (get-text-property (line-beginning-position) 'id)))
+    (when id
+      (mpdired-deleteid-internal id))))
+
+(defun mpdired-delete ()
+  (interactive)
+  (cond ((eq mpdired--view 'playlist)
+	 (mpdired-deleteid-at-point)
+	 (mpdired-playlist-internal))))
+
+(defun mpdired-update ()
+  (interactive)
+  (cond ((eq mpdired--view 'playlist)
+	 (mpdired-playlist-internal))
+	((eq mpdired--view 'browser)
+	 (if mpdired--directory
+	     (mpdired-listall-internal mpdired--directory)
+	   (mpdired-listall-internal "")))))
 
 ;; Main entry point
 (defun mpdired ()
