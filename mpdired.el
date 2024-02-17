@@ -217,7 +217,8 @@
 	(when (re-search-backward "^\\(OK\\|ACK.*\\)$" nil t)
 	  (cond ((eq mpdired--last-command 'listall)
 		 (mpdired--present-listall proc))
-		((eq mpdired--last-command 'queue)
+		((or (eq mpdired--last-command 'queue)
+		     (eq mpdired--last-command 'deleteid))
 		 (mpdired--present-queue proc))))))))
 
 (defun mpdired--sentinel (process event)
@@ -292,7 +293,10 @@
 (defun mpdired-deleteid-internal (id)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'deleteid)
-    (process-send-string process (format "deleteid %d\n" id))))
+    (process-send-string process "command_list_begin\n")
+    (process-send-string process (format "deleteid %d\n" id))
+    (process-send-string process "playlistid\n")
+    (process-send-string process "command_list_end\n")))
 
 (defun mpdired-toggle-play/pause-internal (&optional buffer)
   (mpdired--with-comm-buffer process buffer
@@ -400,8 +404,7 @@
 (defun mpdired-delete ()
   (interactive)
   (cond ((eq mpdired--view 'queue)
-	 (mpdired-deleteid-at-point)
-	 (mpdired-queue-internal))))
+	 (mpdired-deleteid-at-point))))
 
 (defun mpdired-update ()
   (interactive)
