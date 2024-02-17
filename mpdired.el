@@ -29,6 +29,8 @@
 (defvar-local mpdired--network-params nil)
 (defvar-local mpdired--parse-endp nil)
 (defvar-local mpdired--last-command nil)
+(defvar-local mpdired--main-buffer nil
+  "Link to the main MPDired buffer")
 (defvar-local mpdired--previous-directory nil
   "Previous directory used to pass to the MPDired buffer.")
 (defvar-local mpdired--ascending-p nil)
@@ -41,7 +43,7 @@
   (catch 'exit
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
-			  (re-search-forward "^OK$" (line-end-position) t 1))))
+			  (re-search-forward "^\\(OK\\|ACK.*\\)$" (line-end-position) t 1))))
       ;; Look for file or directory line by line (I'm not interested
       ;; in playlist)
       (re-search-forward "^\\(file\\|directory\\): \\(.*\\)$" (line-end-position) t 1)
@@ -100,7 +102,6 @@
 
 (defun mpdired-mode ()
   "Major mode for MPDired."
-  (kill-all-local-variables)
   (use-local-map mpdired-mode-map)
   (set-buffer-modified-p nil)
   (setq major-mode 'mpdired-mode
@@ -118,11 +119,9 @@
 (defun mpdired--main-name (host service localp)
   (format "*MPDired (%s)*" (mpdired--hostname host service localp)))
 
-;; Global state variables.
-(defvar mpdired--directory nil
-  "Current directory of the browser view.")
-
 ;; State variables for the main buffer
+(defvar-local mpdired--directory nil
+  "Current directory of the browser view.")
 (defvar-local mpdired--view nil)
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
@@ -215,7 +214,7 @@
 	  (set-marker (process-mark proc) (point)))
 	(if moving (goto-char (process-mark proc)))
 	;; The server has done its work.
-	(when (re-search-backward "^OK$" nil t)
+	(when (re-search-backward "^\\(OK\\|ACK.*\\)$" nil t)
 	  (cond ((eq mpdired--last-command 'listall)
 		 (mpdired--present-listall proc))
 		((eq mpdired--last-command 'queue)
@@ -250,7 +249,8 @@
 			    :coding 'utf-8
 			    :filter 'mpdired--filter
 			    :sentinel 'mpdired--sentinel)))
-	  (setq mpdired--network-params params)
+	  (setq mpdired--network-params params
+		mpdired--main-buffer (mpdired--main-name host service localp))
 	  (set-process-buffer (apply 'make-network-process params)
 			      (current-buffer)))))))
 
@@ -267,7 +267,7 @@
 (defun mpdired-listall-internal (path &optional ascending-p)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'listall
-	  mpdired--previous-directory mpdired--directory
+	  mpdired--previous-directory (with-current-buffer mpdired--main-buffer mpdired--directory)
 	  mpdired--ascending-p ascending-p)
     (process-send-string process (format "listall \"%s\"\n" path))))
 
@@ -370,9 +370,14 @@
   (cond ((eq mpdired--view 'browser)
 	 (mpdired-queue-internal))
 	((eq mpdired--view 'queue)
-	 (if mpdired--directory
-	     (mpdired-listall-internal mpdired--directory)
-	   (mpdired-listall-internal "")))))
+	 (cond (mpdired--directory
+		(mpdired-listall-internal mpdired--directory)
+		;; Empty buffer? our current directory was probably
+		;; bogus.
+		(when (= 0 (buffer-size))
+		  (sit-for .2)
+		  (mpdired-listall-internal "")))
+	       (t (mpdired-listall-internal ""))))))
 
 (defun mpdired-toggle-play/pause ()
   (interactive)
