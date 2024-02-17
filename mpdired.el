@@ -78,23 +78,38 @@
   ;; Called from the communication buffer.
   (goto-char (point-min))
   (setq mpdired--parse-endp nil)
-  (let (result file time id)
+  (let ((elapsed 0)
+	(duration 1)
+	result file time id)
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
 			  (re-search-forward "^OK$" (line-end-position) t 1))))
-      ;; File
-      (when (re-search-forward "^file: \\(.*\\)$" (line-end-position) t 1)
-	;; if file is already set store the previous entry in the
-	;; list.
-	(when file
-	  (push (list id file time) result))
-	(setq file (match-string 1)))
-      ;; Time
-      (when (re-search-forward "^Time: \\(.*\\)$" (line-end-position) t 1)
-	(setq time (string-to-number (match-string 1))))
-      ;; Id
-      (when (re-search-forward "^Id: \\(.*\\)$" (line-end-position) t 1)
-	(setq id (string-to-number (match-string 1))))
+      (let ((eol (line-end-position)))
+        ;; First, "status" content
+	(when (re-search-forward "^songid: \\([0-9]+\\)$" eol t 1)
+	  (push (string-to-number (match-string 1)) result))
+	(when (re-search-forward "^time: \\([0-9]+\\):\\([0-9]+\\)$" eol t 1)
+	  (setq elapsed (string-to-number (match-string 1))
+		duration (string-to-number (match-string 2))))
+	;; "nextsongid" is the end of status so store what we've
+	;; discovered as elapsed and duration now.
+	(when (re-search-forward "^nextsongid:" eol t 1)
+          (push elapsed result)
+	  (push duration result))
+	;; Then, "playlistid" content
+	;; File
+	(when (re-search-forward "^file: \\(.*\\)$" eol t 1)
+	  ;; if file is already set store the previous entry in the
+	  ;; list.
+	  (when file
+	    (push (list id file time) result))
+	  (setq file (match-string 1)))
+	;; Time
+	(when (re-search-forward "^Time: \\(.*\\)$" eol t 1)
+	  (setq time (string-to-number (match-string 1))))
+	;; Id
+	(when (re-search-forward "^Id: \\(.*\\)$" eol t 1)
+	  (setq id (string-to-number (match-string 1)))))
       (forward-line))
     ;; The last one
     (when file (push (list id file time) result))
@@ -127,12 +142,14 @@
   "Communication buffer associated to this MPDired buffer.")
 
 (defun mpdired--insert-entry (entry)
-  (cond ((stringp entry)
-	 (insert entry)
-	 (put-text-property (line-beginning-position) (line-end-position) 'type 'file))
-	((consp entry)
-	 (insert (propertize (car entry) 'face 'dired-directory))
-	 (put-text-property (line-beginning-position) (line-end-position) 'type 'directory))))
+  (let ((bol (line-beginning-position))
+	(eol (line-end-position)))
+    (cond ((stringp entry)
+	   (insert entry)
+	   (put-text-property bol eol  'type 'file))
+	  ((consp entry)
+	   (insert (propertize (car entry) 'face 'dired-directory))
+	   (put-text-property bol eol 'type 'directory)))))
 
 (defun mpdired--insert-song (song)
   (insert (propertize (cadr song) 'face 'dired-ignored))
@@ -187,7 +204,11 @@
 	 (peer-service (plist-get peer-info :service))
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
 	 (buffer-name (mpdired--main-name peer-host peer-service peer-localp))
-	 (content (mpdired--parse-queue)))
+	 (data (mpdired--parse-queue))
+	 (songid (car data))
+	 (elapsed (cadr data))
+	 (duration (caddr data))
+	 (content (cdddr data)))
     (with-current-buffer (get-buffer-create buffer-name)
       (let ((inhibit-read-only t))
 	(erase-buffer)
@@ -197,7 +218,17 @@
 	    (mpdired--insert-song song)
 	    (insert "\n"))
 	  (when content
-	    (mpdired--insert-song (car (last content)))))
+	    (mpdired--insert-song (car (last content))))
+	  ;; Go to the current song and display elasped time with a face
+	  ;; on the URI.
+	  (when songid
+	    (while (let ((id (get-text-property (point) 'id)))
+		     (and id (/= songid id)))
+	      (forward-line))
+	    (let* ((bol (line-beginning-position))
+		   (eol (line-end-position))
+		   (x (/ (* elapsed (- eol bol)) duration)))
+	      (put-text-property bol (+ bol x) 'face 'dired-special))))
 	;; Set mode and memorize stuff
 	(mpdired-mode)
 	(setq mpdired--comm-buffer (process-buffer proc)
@@ -268,14 +299,19 @@
 (defun mpdired-listall-internal (path &optional ascending-p)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'listall
-	  mpdired--previous-directory (with-current-buffer mpdired--main-buffer mpdired--directory)
+	  mpdired--previous-directory
+	  (with-current-buffer mpdired--main-buffer mpdired--directory)
 	  mpdired--ascending-p ascending-p)
     (process-send-string process (format "listall \"%s\"\n" path))))
 
 (defun mpdired-queue-internal (&optional buffer)
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'queue)
-    (process-send-string process "playlistid\n")))
+    ;; Also get the status to identify the current song.
+    (process-send-string process "command_list_begin\n")
+    (process-send-string process "status\n")
+    (process-send-string process "playlistid\n")
+    (process-send-string process "command_list_end\n")))
 
 (defun mpdired-queue (comm-buffer)
   (mpdired-queue-internal comm-buffer))
@@ -295,6 +331,7 @@
     (setq mpdired--last-command 'deleteid)
     (process-send-string process "command_list_begin\n")
     (process-send-string process (format "deleteid %d\n" id))
+    (process-send-string process "status\n")
     (process-send-string process "playlistid\n")
     (process-send-string process "command_list_end\n")))
 
@@ -313,10 +350,13 @@
     (setq mpdired--last-command 'previous)
     (process-send-string process "previous\n")))
 
+;; XXX for debugging
 (defun mpdired-status-internal ()
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'status)
-    (process-send-string process "status\n")))
+    (process-send-string process "command_list_begin\n")
+    (process-send-string process "status\n")
+    (process-send-string process "command_list_end\n")))
 
 (defun mpdired-next-line ()
   (interactive)
