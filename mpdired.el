@@ -70,9 +70,9 @@
   ;; It have the good property of being a prefix of any string.
   (mpdired--parse-listall-1 "" (list "")))
 
-;; All my functions are called *-playlist but the correct "playlistid"
-;; MPD interface is used.
-(defun mpdired--parse-playlist ()
+;; All my functions are called *-queue but the correct are using the
+;; correct "playlistid" MPD interface.
+(defun mpdired--parse-queue ()
   ;; Called from the communication buffer.
   (goto-char (point-min))
   (setq mpdired--parse-endp nil)
@@ -181,14 +181,14 @@
 		mpdired--comm-buffer (process-buffer proc)
 		mpdired--view 'browser))))))
 
-(defun mpdired--present-playlist (proc)
+(defun mpdired--present-queue (proc)
   ;; Called by filter of the communication buffer.
   (let* ((peer-info (process-contact proc t))
 	 (peer-host (plist-get peer-info :host))
 	 (peer-service (plist-get peer-info :service))
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
 	 (buffer-name (mpdired--main-name peer-host peer-service peer-localp))
-	 (content (mpdired--parse-playlist)))
+	 (content (mpdired--parse-queue)))
     (with-current-buffer (get-buffer-create buffer-name)
       (let ((inhibit-read-only t))
 	(erase-buffer)
@@ -202,7 +202,7 @@
 	;; Set mode and memorize stuff
 	(mpdired-mode)
 	(setq mpdired--comm-buffer (process-buffer proc)
-	      mpdired--view 'playlist)))))
+	      mpdired--view 'queue)))))
 
 (defun mpdired--filter (proc string)
   (when (buffer-live-p (process-buffer proc))
@@ -218,8 +218,8 @@
 	(when (re-search-backward "^OK$" nil t)
 	  (cond ((eq mpdired--last-command 'listall)
 		 (mpdired--present-listall proc))
-		((eq mpdired--last-command 'playlist)
-		 (mpdired--present-playlist proc))))))))
+		((eq mpdired--last-command 'queue)
+		 (mpdired--present-queue proc))))))))
 
 (defun mpdired--sentinel (process event)
   (message "Process: %s had the event '%s'" process event))
@@ -271,13 +271,13 @@
 	  mpdired--ascending-p ascending-p)
     (process-send-string process (format "listall \"%s\"\n" path))))
 
-(defun mpdired-playlist-internal (&optional buffer)
+(defun mpdired-queue-internal (&optional buffer)
   (mpdired--with-comm-buffer process buffer
-    (setq mpdired--last-command 'playlist)
+    (setq mpdired--last-command 'queue)
     (process-send-string process "playlistid\n")))
 
-(defun mpdired-playlist (comm-buffer)
-  (mpdired-playlist-internal comm-buffer))
+(defun mpdired-queue (comm-buffer)
+  (mpdired-queue-internal comm-buffer))
 
 (defun mpdired-playid-internal (id)
   (mpdired--with-comm-buffer process nil
@@ -368,8 +368,8 @@
 (defun mpdired-toggle-view ()
   (interactive)
   (cond ((eq mpdired--view 'browser)
-	 (mpdired-playlist-internal))
-	((eq mpdired--view 'playlist)
+	 (mpdired-queue-internal))
+	((eq mpdired--view 'queue)
 	 (if mpdired--directory
 	     (mpdired-listall-internal mpdired--directory)
 	   (mpdired-listall-internal "")))))
@@ -394,14 +394,14 @@
 
 (defun mpdired-delete ()
   (interactive)
-  (cond ((eq mpdired--view 'playlist)
+  (cond ((eq mpdired--view 'queue)
 	 (mpdired-deleteid-at-point)
-	 (mpdired-playlist-internal))))
+	 (mpdired-queue-internal))))
 
 (defun mpdired-update ()
   (interactive)
-  (cond ((eq mpdired--view 'playlist)
-	 (mpdired-playlist-internal))
+  (cond ((eq mpdired--view 'queue)
+	 (mpdired-queue-internal))
 	((eq mpdired--view 'browser)
 	 (if mpdired--directory
 	     (mpdired-listall-internal mpdired--directory)
@@ -411,14 +411,14 @@
   (interactive)
   (cond ((eq mpdired--view 'browser)
 	 (mpdired-next-line))
-	((eq mpdired--view 'playlist)
+	((eq mpdired--view 'queue)
 	 (mpdired-next-internal))))
 
 (defun mpdired-previous ()
   (interactive)
   (cond ((eq mpdired--view 'browser)
 	 (mpdired-previous-line))
-	((eq mpdired--view 'playlist)
+	((eq mpdired--view 'queue)
 	 (mpdired-previous-internal))))
 
 ;; Main entry point
@@ -431,6 +431,6 @@
 	 (comm-name (mpdired--comm-name host service localp))
 	 (main-name (mpdired--main-name host service localp)))
     (mpdired--maybe-init host service localp)
-    ;; Defaults to playlist view
-    (mpdired-playlist comm-name)
+    ;; Defaults to queue view
+    (mpdired-queue comm-name)
     (pop-to-buffer main-name)))
