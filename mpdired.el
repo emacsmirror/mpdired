@@ -145,6 +145,8 @@
 (defvar-local mpdired--view nil)
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
+(defvar-local mpdired--queue-point nil
+  "Saved point position in the queue view.")
 
 (defun mpdired--insert-entry (entry)
   (let ((bol (line-beginning-position)))
@@ -234,8 +236,10 @@
 		   (eol (line-end-position))
 		   (x (/ (* elapsed (- eol bol)) duration)))
 	      (put-text-property bol (+ bol x) 'face 'dired-special))))
-	;; Set mode and memorize stuff
+	;; Set mode, restore point and memorize stuff
 	(mpdired-mode)
+	(when mpdired--queue-point
+	  (goto-char mpdired--queue-point))
 	(setq mpdired--comm-buffer (process-buffer proc)
 	      mpdired--view 'queue)))))
 
@@ -336,6 +340,7 @@
     (setq mpdired--last-command 'deleteid)
     (process-send-string process "command_list_begin\n")
     (process-send-string process (format "deleteid %d\n" id))
+    ;; XXX A playlistid should always be preceded by a status
     (process-send-string process "status\n")
     (process-send-string process "playlistid\n")
     (process-send-string process "command_list_end\n")))
@@ -366,12 +371,16 @@
 (defun mpdired-next-line ()
   (interactive)
   (forward-line)
-  (goto-char (line-beginning-position)))
+  (goto-char (line-beginning-position))
+  (when (eq mpdired--view 'queue)
+    (setf mpdired--queue-point (point))))
 
 (defun mpdired-previous-line ()
   (interactive)
   (forward-line -1)
-  (goto-char (line-beginning-position)))
+  (goto-char (line-beginning-position))
+  (when (eq mpdired--view 'queue)
+    (setf mpdired--queue-point (point))))
 
 (defun mpdired-listall-at-point ()
   (goto-char (line-beginning-position))
