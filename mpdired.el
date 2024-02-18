@@ -9,17 +9,20 @@
 (defvar-keymap mpdired-mode-map
   :doc "Local keymap for MPDired."
   "C-n"   'mpdired-next-line
-  "n"     'mpdired-next
+  "n"     'mpdired-next-line
   "C-p"   'mpdired-previous-line
-  "p"     'mpdired-previous
-  "q"     'bury-buffer
+  "p"     'mpdired-previous-line
   "C-m"   'mpdired-enter
   "^"     'mpdired-goto-parent
   "o"     'mpdired-toggle-view
+  "g"     'mpdired-update
+  "q"     'bury-buffer
   "<SPC>" 'mpdired-toggle-play/pause
+  "N"     'mpdired-next
+  "P"     'mpdired-previous
   "a"     'mpdired-add-at-point
-  "D"     'mpdired-delete
-  "g"     'mpdired-update)
+  ;; Only for queue
+  "D"     'mpdired-delete)
 
 (defun mpdired--subdir-p (dir-a dir-b)
   (let ((pos (string-search dir-a dir-b)))
