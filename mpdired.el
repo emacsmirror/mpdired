@@ -20,8 +20,8 @@
   "g"      'mpdired-update
   "q"      'bury-buffer
   "<SPC>"  'mpdired-pause-internal
-  "N"      'mpdired-next
-  "P"      'mpdired-previous
+  "N"      'mpdired-next-internal
+  "P"      'mpdired-previous-internal
   "a"      'mpdired-add-at-point
   ;; Only for queue
   "D"      'mpdired-delete)
@@ -365,11 +365,13 @@
     (process-send-string process "pause\n")))
 
 (defun mpdired-next-internal (&optional buffer)
+  (interactive)
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'next)
     (process-send-string process "next\n")))
 
 (defun mpdired-previous-internal (&optional buffer)
+  (interactive)
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'previous)
     (process-send-string process "previous\n")))
@@ -482,20 +484,6 @@
 	     (mpdired-listall-internal mpdired--directory)
 	   (mpdired-listall-internal "")))))
 
-(defun mpdired-next ()
-  (interactive)
-  (cond ((eq mpdired--view 'browser)
-	 (mpdired-next-line))
-	((eq mpdired--view 'queue)
-	 (mpdired-next-internal))))
-
-(defun mpdired-previous ()
-  (interactive)
-  (cond ((eq mpdired--view 'browser)
-	 (mpdired-previous-line))
-	((eq mpdired--view 'queue)
-	 (mpdired-previous-internal))))
-
 (defun mpdired--prepare ()
   ;; Get user's host and service current setting.
   (let* ((localp (mpdired--local-p mpdired-host))
@@ -512,6 +500,16 @@
   (interactive)
   (let ((buffers (mpdired--prepare)))
     (mpdired-pause-internal (car buffers))))
+
+(defun mpdired-next ()
+  (interactive)
+  (let ((buffers (mpdired--prepare)))
+    (mpdired-next-internal (car buffers))))
+
+(defun mpdired-previous ()
+  (interactive)
+  (let ((buffers (mpdired--prepare)))
+    (mpdired-previous-internal (car buffers))))
 
 ;; Main entry point.
 (defun mpdired ()
