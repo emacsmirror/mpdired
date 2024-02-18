@@ -515,3 +515,5 @@
     ;; Defaults to queue view
     (mpdired-queue comm-name)
     (pop-to-buffer main-name)))
+
+(provide 'mpdired)
