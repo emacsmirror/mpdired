@@ -19,7 +19,7 @@
   "o"      'mpdired-toggle-view
   "g"      'mpdired-update
   "q"      'bury-buffer
-  "<SPC>"  'mpdired-toggle-play/pause
+  "<SPC>"  'mpdired-pause-internal
   "N"      'mpdired-next
   "P"      'mpdired-previous
   "a"      'mpdired-add-at-point
@@ -358,7 +358,8 @@
     (process-send-string process "playlistid\n")
     (process-send-string process "command_list_end\n")))
 
-(defun mpdired-toggle-play/pause-internal (&optional buffer)
+(defun mpdired-pause-internal (&optional buffer)
+  (interactive)
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'pause)
     (process-send-string process "pause\n")))
@@ -456,10 +457,6 @@
 		  (mpdired-listall-internal "")))
 	       (t (mpdired-listall-internal ""))))))
 
-(defun mpdired-toggle-play/pause ()
-  (interactive)
-  (mpdired-toggle-play/pause-internal))
-
 (defun mpdired-add-at-point ()
   (interactive)
   (let* ((bol (line-beginning-position))
@@ -507,16 +504,23 @@
 	 (comm-name (mpdired--comm-name host service localp))
 	 (main-name (mpdired--main-name host service localp)))
     (mpdired--maybe-init host service localp)
-    (cons main-name comm-name)))
+    (cons comm-name main-name)))
 
-;; Main entry point
+
+;; General commands (i.e. usable outside of the MPDired buffer).
+(defun mpdired-pause ()
+  (interactive)
+  (let ((buffers (mpdired--prepare)))
+    (mpdired-pause-internal (car buffers))))
+
+;; Main entry point.
 (defun mpdired ()
   (interactive)
-  (let* ((names (mpdired--prepare))
-	 (main-name (car names))
-	 (comm-name (cdr names)))
+  (let* ((buffers (mpdired--prepare))
+	 (comm (car buffers))
+	 (main (cdr buffers)))
     ;; Defaults to queue view
-    (mpdired-queue-internal comm-name)
-    (pop-to-buffer main-name)))
+    (mpdired-queue-internal comm)
+    (pop-to-buffer main)))
 
 (provide 'mpdired)
