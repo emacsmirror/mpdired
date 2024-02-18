@@ -203,23 +203,21 @@
 	      (mpdired--insert-entry e)
 	      (insert "\n"))
 	    (mpdired--insert-entry (car (last data))))
-	  ;; Go to the previous directory line when ascending
+	  ;; Set mode and memorize stuff
+	  (mpdired-mode)
+	  (setq mpdired--directory (when top top)
+		mpdired--comm-buffer (process-buffer proc)
+		mpdired--view 'browser)
+	  ;; Finally move point to the correct place.
 	  (cond (ascending-p
 		 (goto-char (point-min))
 		 (re-search-forward from-directory nil t)
-		 (goto-char (line-beginning-position)))
-		(t
-		 (goto-char (point-min))
-		 (when top
-		   (forward-line)
-		   (goto-char (line-beginning-position)))))
-	  ;; Set mode, restore point and memorize stuff
-	  (mpdired-mode)
-	  (when mpdired--browser-point
-	    (goto-char mpdired--browser-point))
-	  (setq mpdired--directory (when top top)
-		mpdired--comm-buffer (process-buffer proc)
-		mpdired--view 'browser))))))
+		 (goto-char (line-beginning-position))
+		 (setq mpdired--browser-point (point)))
+		(mpdired--browser-point
+		 (goto-char mpdired--browser-point))
+		(t (goto-char (point-min))
+		   (when top (mpdired-next-line)))))))))
 
 (defun mpdired--present-queue (proc)
   ;; Called by filter of the communication buffer.
@@ -419,9 +417,10 @@
 
 (defun mpdired-enter ()
   (interactive)
-  (if (eq mpdired--view 'browser)
-      (mpdired-listall-at-point)
-    (mpdired-playid-at-point)))
+  (cond ((eq mpdired--view 'browser)
+	 (setq mpdired--browser-point nil)
+	 (mpdired-listall-at-point))
+	(t (mpdired-playid-at-point))))
 
 (defun mpdired--unsplit (list separator)
   (let (res)
@@ -441,9 +440,10 @@
 (defun mpdired-goto-parent ()
   (interactive)
   (let ((parent (mpdired--parent)))
-    (if parent
-	(mpdired-listall-internal parent t)
-      (message "You are at the toplevel."))))
+    (cond (parent
+	   (setq mpdired--browser-point nil)
+	   (mpdired-listall-internal parent t))
+	  (t (message "You are at the toplevel.")))))
 
 (defun mpdired-toggle-view ()
   (interactive)
