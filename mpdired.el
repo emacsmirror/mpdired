@@ -8,21 +8,23 @@
 
 (defvar-keymap mpdired-mode-map
   :doc "Local keymap for MPDired."
-  "C-n"   'mpdired-next-line
-  "n"     'mpdired-next-line
-  "C-p"   'mpdired-previous-line
-  "p"     'mpdired-previous-line
-  "C-m"   'mpdired-enter
-  "^"     'mpdired-goto-parent
-  "o"     'mpdired-toggle-view
-  "g"     'mpdired-update
-  "q"     'bury-buffer
-  "<SPC>" 'mpdired-toggle-play/pause
-  "N"     'mpdired-next
-  "P"     'mpdired-previous
-  "a"     'mpdired-add-at-point
+  "C-n"    'mpdired-next-line
+  "n"      'mpdired-next-line
+  "<down>" 'mpdired-next-line
+  "C-p"    'mpdired-previous-line
+  "p"      'mpdired-previous-line
+  "<up>"   'mpdired-previous-line
+  "C-m"    'mpdired-enter
+  "^"      'mpdired-goto-parent
+  "o"      'mpdired-toggle-view
+  "g"      'mpdired-update
+  "q"      'bury-buffer
+  "<SPC>"  'mpdired-toggle-play/pause
+  "N"      'mpdired-next
+  "P"      'mpdired-previous
+  "a"      'mpdired-add-at-point
   ;; Only for queue
-  "D"     'mpdired-delete)
+  "D"      'mpdired-delete)
 
 (defun mpdired--subdir-p (dir-a dir-b)
   (let ((pos (string-search dir-a dir-b)))
@@ -148,6 +150,8 @@
 (defvar-local mpdired--view nil)
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
+(defvar-local mpdired--browser-point nil
+  "Saved point position in the browser view.")
 (defvar-local mpdired--queue-point nil
   "Saved point position in the queue view.")
 
@@ -209,8 +213,10 @@
 		 (when top
 		   (forward-line)
 		   (goto-char (line-beginning-position)))))
-	  ;; Set mode and memorize stuff
+	  ;; Set mode, restore point and memorize stuff
 	  (mpdired-mode)
+	  (when mpdired--browser-point
+	    (goto-char mpdired--browser-point))
 	  (setq mpdired--directory (when top top)
 		mpdired--comm-buffer (process-buffer proc)
 		mpdired--view 'browser))))))
@@ -380,19 +386,23 @@
     (process-send-string process "status\n")
     (process-send-string process "command_list_end\n")))
 
+(defun mpdired--save-point ()
+  (cond ((eq mpdired--view 'queue)
+	 (setf mpdired--queue-point (point)))
+	((eq mpdired--view 'browser)
+	 (setf mpdired--browser-point (point)))))
+
 (defun mpdired-next-line ()
   (interactive)
   (forward-line)
   (goto-char (line-beginning-position))
-  (when (eq mpdired--view 'queue)
-    (setf mpdired--queue-point (point))))
+  (mpdired--save-point))
 
 (defun mpdired-previous-line ()
   (interactive)
   (forward-line -1)
   (goto-char (line-beginning-position))
-  (when (eq mpdired--view 'queue)
-    (setf mpdired--queue-point (point))))
+  (mpdired--save-point))
 
 (defun mpdired-listall-at-point ()
   (let* ((bol (line-beginning-position))
