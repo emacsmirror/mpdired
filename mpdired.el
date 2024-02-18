@@ -338,9 +338,6 @@
     (process-send-string process "playlistid\n")
     (process-send-string process "command_list_end\n")))
 
-(defun mpdired-queue (comm-buffer)
-  (mpdired-queue-internal comm-buffer))
-
 (defun mpdired-playid-internal (id)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'playid)
@@ -502,9 +499,7 @@
 	((eq mpdired--view 'queue)
 	 (mpdired-previous-internal))))
 
-;; Main entry point
-(defun mpdired ()
-  (interactive)
+(defun mpdired--prepare ()
   ;; Get user's host and service current setting.
   (let* ((localp (mpdired--local-p mpdired-host))
 	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
@@ -512,8 +507,16 @@
 	 (comm-name (mpdired--comm-name host service localp))
 	 (main-name (mpdired--main-name host service localp)))
     (mpdired--maybe-init host service localp)
+    (cons main-name comm-name)))
+
+;; Main entry point
+(defun mpdired ()
+  (interactive)
+  (let* ((names (mpdired--prepare))
+	 (main-name (car names))
+	 (comm-name (cdr names)))
     ;; Defaults to queue view
-    (mpdired-queue comm-name)
+    (mpdired-queue-internal comm-name)
     (pop-to-buffer main-name)))
 
 (provide 'mpdired)
