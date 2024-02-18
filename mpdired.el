@@ -222,9 +222,10 @@
 	    (mpdired--insert-song song)
 	    (insert "\n"))
 	  (when songs
-	    (mpdired--insert-song (car (last songs))))
-	  ;; Go to the current song and display elasped time with a face
-	  ;; on the URI.
+	    (mpdired--insert-song (car (last songs)))))
+	;; Go to the current song and display elasped time with a face
+	;; on the URI.
+	(save-excursion
 	  (when songid
 	    (while (let ((id (get-text-property (point) 'id)))
 		     (and id (/= songid id)))
