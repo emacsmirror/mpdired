@@ -80,6 +80,8 @@
   (setq mpdired--parse-endp nil)
   (let ((elapsed 0)
 	(duration 1)
+	(songid 0)
+	(in-status-p t)
 	result file time id)
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
@@ -87,13 +89,16 @@
       (let ((eol (line-end-position)))
         ;; First, "status" content
 	(when (re-search-forward "^songid: \\([0-9]+\\)$" eol t 1)
-	  (push (string-to-number (match-string 1)) result))
+	  (setq songid (string-to-number (match-string 1))))
 	(when (re-search-forward "^time: \\([0-9]+\\):\\([0-9]+\\)$" eol t 1)
 	  (setq elapsed (string-to-number (match-string 1))
 		duration (string-to-number (match-string 2))))
-	;; "nextsongid" is the end of status so store what we've
-	;; discovered as elapsed and duration now.
-	(when (re-search-forward "^nextsongid:" eol t 1)
+	;; When we enconter our first "file:" the status parsing is
+	;; done so store what we've discovered so far.
+	(when (and in-status-p
+		   (save-excursion (re-search-forward "^file: .*$" eol t 1)))
+	  (setq in-status-p nil)
+	  (push songid result)
           (push elapsed result)
 	  (push duration result))
 	;; Then, "playlistid" content
@@ -142,14 +147,13 @@
   "Communication buffer associated to this MPDired buffer.")
 
 (defun mpdired--insert-entry (entry)
-  (let ((bol (line-beginning-position))
-	(eol (line-end-position)))
+  (let ((bol (line-beginning-position)))
     (cond ((stringp entry)
 	   (insert entry)
-	   (put-text-property bol eol  'type 'file))
+	   (put-text-property bol (line-end-position) 'type 'file))
 	  ((consp entry)
 	   (insert (propertize (car entry) 'face 'dired-directory))
-	   (put-text-property bol eol 'type 'directory)))))
+	   (put-text-property bol (line-end-position) 'type 'directory)))))
 
 (defun mpdired--insert-song (song)
   (insert (propertize (cadr song) 'face 'dired-ignored))
@@ -208,17 +212,17 @@
 	 (songid (car data))
 	 (elapsed (cadr data))
 	 (duration (caddr data))
-	 (content (cdddr data)))
+	 (songs (cdddr data)))
     (with-current-buffer (get-buffer-create buffer-name)
       (let ((inhibit-read-only t))
 	(erase-buffer)
-	;; Insert the content
+	;; Insert songs
 	(save-excursion
-	  (dolist (song (butlast content))
+	  (dolist (song (butlast songs))
 	    (mpdired--insert-song song)
 	    (insert "\n"))
-	  (when content
-	    (mpdired--insert-song (car (last content))))
+	  (when songs
+	    (mpdired--insert-song (car (last songs))))
 	  ;; Go to the current song and display elasped time with a face
 	  ;; on the URI.
 	  (when songid
