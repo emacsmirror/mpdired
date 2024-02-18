@@ -152,14 +152,21 @@
   (let ((bol (line-beginning-position)))
     (cond ((stringp entry)
 	   (insert entry)
-	   (put-text-property bol (line-end-position) 'type 'file))
+	   (put-text-property bol (line-end-position) 'type 'file)
+	   (put-text-property bol (line-end-position) 'uri entry))
 	  ((consp entry)
 	   (insert (propertize (car entry) 'face 'dired-directory))
-	   (put-text-property bol (line-end-position) 'type 'directory)))))
+	   (put-text-property bol (line-end-position) 'type 'directory)
+	   (put-text-property bol (line-end-position) 'uri (car entry))))))
 
 (defun mpdired--insert-song (song)
-  (insert (propertize (cadr song) 'face 'dired-ignored))
-  (put-text-property (line-beginning-position) (line-end-position) 'id (car song)))
+  (let ((id (car song))
+	(uri (cadr song)))
+    (insert (propertize uri 'face 'dired-ignored))
+    (let ((bol (line-beginning-position))
+	  (eol (line-end-position)))
+      (put-text-property bol eol 'id id)
+      (put-text-property bol eol 'uri uri))))
 
 (defun mpdired--present-listall (proc)
   ;; Called by filter of the communication buffer.
@@ -383,12 +390,12 @@
     (setf mpdired--queue-point (point))))
 
 (defun mpdired-listall-at-point ()
-  (goto-char (line-beginning-position))
-  (save-excursion
-    (re-search-forward "^\\(.*\\)$" (line-end-position) t))
-  (if (eq (get-text-property (line-beginning-position) 'type) 'directory)
-      (mpdired-listall-internal (match-string 1))
-    (message "Cannot browse a file.")))
+  (let* ((bol (line-beginning-position))
+	 (type (get-text-property bol 'type))
+	 (uri (get-text-property bol 'uri)))
+    (if (eq type 'directory)
+	(mpdired-listall-internal uri)
+      (message "Cannot browse a file."))))
 
 (defun mpdired-playid-at-point ()
   (let ((id (get-text-property (line-beginning-position) 'id)))
@@ -443,12 +450,9 @@
 
 (defun mpdired-add-at-point ()
   (interactive)
-  (goto-char (line-beginning-position))
-  (save-excursion
-    (re-search-forward "^\\(.*\\)$" (line-end-position) t))
-  (let ((uri (match-string 1)))
-    (when uri
-      (mpdired-add-internal uri))))
+  (let* ((bol (line-beginning-position))
+	 (uri (get-text-property bol 'uri)))
+    (when uri (mpdired-add-internal uri))))
 
 (defun mpdired-deleteid-at-point ()
   (let ((id (get-text-property (line-beginning-position) 'id)))
