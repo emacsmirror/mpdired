@@ -165,14 +165,14 @@
 	 (peer-host (plist-get peer-info :host))
 	 (peer-service (plist-get peer-info :service))
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
-	 (buffer-name (mpdired--main-name peer-host peer-service peer-localp))
+	 (main-buffer (mpdired--main-name peer-host peer-service peer-localp))
 	 (content (mpdired--parse-listall))
 	 from-directory ascending-p)
     ;; Retrieve infos from this process buffer
     (with-current-buffer (process-buffer proc)
       (setq from-directory mpdired--previous-directory
 	    ascending-p mpdired--ascending-p))
-    (with-current-buffer (get-buffer-create buffer-name)
+    (with-current-buffer (get-buffer-create main-buffer)
       (let ((inhibit-read-only t))
 	(erase-buffer)
 	;; `content' is always of the form ("" rest...) so if there
@@ -207,13 +207,13 @@
 	 (peer-host (plist-get peer-info :host))
 	 (peer-service (plist-get peer-info :service))
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
-	 (buffer-name (mpdired--main-name peer-host peer-service peer-localp))
+	 (main-buffer (mpdired--main-name peer-host peer-service peer-localp))
 	 (data (mpdired--parse-queue))
 	 (songid (car data))
 	 (elapsed (cadr data))
 	 (duration (caddr data))
 	 (songs (cdddr data)))
-    (with-current-buffer (get-buffer-create buffer-name)
+    (with-current-buffer (get-buffer-create main-buffer)
       (let ((inhibit-read-only t))
 	(erase-buffer)
 	;; Insert songs
