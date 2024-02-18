@@ -206,7 +206,9 @@
 		 (goto-char (line-beginning-position)))
 		(t
 		 (goto-char (point-min))
-		 (if top (mpdired-next-line))))
+		 (when top
+		   (forward-line)
+		   (goto-char (line-beginning-position)))))
 	  ;; Set mode and memorize stuff
 	  (mpdired-mode)
 	  (setq mpdired--directory (when top top)
