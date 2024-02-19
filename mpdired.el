@@ -153,16 +153,20 @@
 (defvar-local mpdired--queue-point nil
   "Saved point position in the queue view.")
 
+(defun mpdired--short-name (string)
+  (car (last (split-string string "/"))))
+
 (defun mpdired--insert-entry (entry)
   (let ((bol (line-beginning-position)))
     (cond ((stringp entry)
-	   (insert entry)
+	   (insert (mpdired--short-name entry))
 	   (put-text-property bol (line-end-position) 'type 'file)
 	   (put-text-property bol (line-end-position) 'uri entry))
 	  ((consp entry)
-	   (insert (propertize (car entry) 'face 'dired-directory))
-	   (put-text-property bol (line-end-position) 'type 'directory)
-	   (put-text-property bol (line-end-position) 'uri (car entry))))))
+	   (let ((dir (car entry)))
+	     (insert (propertize (mpdired--short-name dir) 'face 'dired-directory))
+	     (put-text-property bol (line-end-position) 'type 'directory)
+	     (put-text-property bol (line-end-position) 'uri dir))))))
 
 (defun mpdired--insert-song (song)
   (let ((id (car song))
