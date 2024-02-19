@@ -36,8 +36,6 @@
 (defvar-local mpdired--last-command nil)
 (defvar-local mpdired--main-buffer nil
   "Link to the main MPDired buffer")
-(defvar-local mpdired--previous-directory nil
-  "Previous directory used to pass to the MPDired buffer.")
 (defvar-local mpdired--ascending-p nil)
 
 (defun mpdired--parse-listall-1 (current accum)
@@ -147,6 +145,8 @@
 ;; State variables for the main buffer
 (defvar-local mpdired--directory nil
   "Current directory of the browser view.")
+(defvar-local mpdired--previous-directory nil
+  "Previous directory of the browser view.")
 (defvar-local mpdired--view nil)
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
@@ -183,41 +183,41 @@
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
 	 (main-buffer (mpdired--main-name peer-host peer-service peer-localp))
 	 (content (mpdired--parse-listall))
-	 from-directory ascending-p)
+	 ascending-p)
     ;; Retrieve infos from this process buffer
     (with-current-buffer (process-buffer proc)
-      (setq from-directory mpdired--previous-directory
-	    ascending-p mpdired--ascending-p))
+      (setq ascending-p mpdired--ascending-p))
     (with-current-buffer (get-buffer-create main-buffer)
-      (let ((inhibit-read-only t))
+      (let* ((inhibit-read-only t)
+	     ;; `content' is always of the form ("" rest...) so if there
+	     ;; is only one "rest" use it as content.
+	     (content (if (cddr content) content (cadr content)))
+	     (top (unless (string= "" (car content)) (car content)))
+	     (data (cdr content)))
 	(erase-buffer)
-	;; `content' is always of the form ("" rest...) so if there
-	;; is only one "rest" use it as content.
-	(let* ((content (if (cddr content) content (cadr content)))
-	       (top (unless (string= "" (car content)) (car content)))
-	       (data (cdr content)))
-	  ;; Insert the content
-	  (save-excursion
-	    (if top (insert (propertize top 'face 'dired-header) ":\n"))
-	    (dolist (e (butlast data))
-	      (mpdired--insert-entry e)
-	      (insert "\n"))
-	    (mpdired--insert-entry (car (last data))))
-	  ;; Set mode and memorize stuff
-	  (mpdired-mode)
-	  (setq mpdired--directory (when top top)
-		mpdired--comm-buffer (process-buffer proc)
-		mpdired--view 'browser)
-	  ;; Finally move point to the correct place.
-	  (cond (ascending-p
-		 (goto-char (point-min))
-		 (re-search-forward from-directory nil t)
-		 (goto-char (line-beginning-position))
-		 (setq mpdired--browser-point (point)))
-		(mpdired--browser-point
-		 (goto-char mpdired--browser-point))
-		(t (goto-char (point-min))
-		   (when top (mpdired-next-line)))))))))
+	;; Insert the content
+	(save-excursion
+	  (if top (insert (propertize top 'face 'dired-header) ":\n"))
+	  (dolist (e (butlast data))
+	    (mpdired--insert-entry e)
+	    (insert "\n"))
+	  (mpdired--insert-entry (car (last data))))
+	;; Set mode and memorize stuff
+	(mpdired-mode)
+	(if ascending-p (setq mpdired--previous-directory mpdired--directory))
+	(setq mpdired--directory (when top top)
+	      mpdired--comm-buffer (process-buffer proc)
+	      mpdired--view 'browser)
+	;; Finally move point to the correct place.
+	(cond ((and ascending-p mpdired--previous-directory)
+	       (goto-char (point-min))
+	       (re-search-forward mpdired--previous-directory nil t)
+	       (goto-char (line-beginning-position))
+	       (setq mpdired--browser-point (point)))
+	      (mpdired--browser-point
+	       (goto-char mpdired--browser-point))
+	      (t (goto-char (point-min))
+		 (when top (mpdired-next-line))))))))
 
 (defun mpdired--present-queue (proc)
   ;; Called by filter of the communication buffer.
@@ -324,8 +324,6 @@
 (defun mpdired-listall-internal (path &optional ascending-p)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'listall
-	  mpdired--previous-directory
-	  (with-current-buffer mpdired--main-buffer mpdired--directory)
 	  mpdired--ascending-p ascending-p)
     (process-send-string process (format "listall \"%s\"\n" path))))
 
