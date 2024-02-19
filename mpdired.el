@@ -23,6 +23,9 @@
   "N"      'mpdired-next-internal
   "P"      'mpdired-previous-internal
   "a"      'mpdired-add-at-point
+  "m"      'mpdired-mark-at-point
+  "u"      'mpdired-unmark-at-point
+  "<DEL>"  'mpdired-previous-unmark
   ;; Only for queue
   "D"      'mpdired-delete)
 
@@ -157,6 +160,7 @@
   (car (last (split-string string "/"))))
 
 (defun mpdired--insert-entry (entry)
+  (insert "  ")
   (let ((bol (line-beginning-position)))
     (cond ((stringp entry)
 	   (insert (mpdired--short-name entry))
@@ -171,7 +175,7 @@
 (defun mpdired--insert-song (song)
   (let ((id (car song))
 	(uri (cadr song)))
-    (insert (propertize uri 'face 'dired-ignored))
+    (insert "  " (propertize uri 'face 'dired-ignored))
     (let ((bol (line-beginning-position))
 	  (eol (line-end-position)))
       (put-text-property bol eol 'id id)
@@ -393,13 +397,13 @@
 (defun mpdired-next-line ()
   (interactive)
   (forward-line)
-  (goto-char (line-beginning-position))
+  (goto-char (+ 2 (line-beginning-position)))
   (mpdired--save-point))
 
 (defun mpdired-previous-line ()
   (interactive)
   (forward-line -1)
-  (goto-char (line-beginning-position))
+  (goto-char (+ 2 (line-beginning-position)))
   (mpdired--save-point))
 
 (defun mpdired-listall-at-point ()
@@ -458,6 +462,40 @@
 		  (sit-for .2)
 		  (mpdired-listall-internal "")))
 	       (t (mpdired-listall-internal ""))))))
+
+(defun mpdired-mark-at-point ()
+  (interactive)
+  (let ((bol (line-beginning-position))
+	(mark ?*)
+	(inhibit-read-only t))
+    (put-text-property bol (line-end-position) 'mark mark)
+    (save-excursion
+      (goto-char bol)
+      (delete-char 1)
+      (insert-char mark))
+    (mpdired-next-line)))
+
+(defun mpdired-unmark-at-point ()
+  (interactive)
+  (let ((bol (line-beginning-position))
+	(inhibit-read-only t))
+    (remove-text-properties bol (line-end-position) '(mark))
+    (save-excursion
+      (goto-char bol)
+      (delete-char 1)
+      (insert-char ? ))
+    (mpdired-next-line)))
+
+(defun mpdired-previous-unmark ()
+  (interactive)
+  (mpdired-previous-line)
+  (let ((bol (line-beginning-position))
+	(inhibit-read-only t))
+    (remove-text-properties bol (line-end-position) '(mark))
+    (save-excursion
+      (goto-char bol)
+      (delete-char 1)
+      (insert-char ? ))))
 
 (defun mpdired-add-at-point ()
   (interactive)
