@@ -526,14 +526,13 @@
 
 (defun mpdired-add-at-point ()
   (interactive)
-  (let* ((bol (line-beginning-position))
+  (let* ((bol (mpdired--bol))
 	 (uri (get-text-property bol 'uri)))
     (when uri (mpdired-add-internal uri))))
 
 (defun mpdired-deleteid-at-point ()
-  (let ((id (get-text-property (line-beginning-position) 'id)))
-    (when id
-      (mpdired-deleteid-internal id))))
+  (let ((id (get-text-property (mpdired--bol) 'id)))
+    (when id (mpdired-deleteid-internal id))))
 
 (defun mpdired-delete ()
   (interactive)
