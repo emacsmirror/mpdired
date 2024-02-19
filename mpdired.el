@@ -30,6 +30,18 @@
   ;; Only for queue
   "D"      'mpdired-delete)
 
+(defface mpdired-song
+  '((t :inherit dired-ignored))
+  "Face used to show a song.")
+
+(defface mpdired-progress
+  '((t :inherit dired-special))
+  "Face used to show the progress of a song.")
+
+(defface mpdired-directory
+  '((t :inherit dired-directory))
+  "Face used to show a directory.")
+
 (defun mpdired--subdir-p (dir-a dir-b)
   (let ((pos (string-search dir-a dir-b)))
     (and pos (zerop pos))))
@@ -174,14 +186,14 @@
 	   (put-text-property bol (line-end-position) 'uri entry))
 	  ((consp entry)
 	   (let ((dir (car entry)))
-	     (insert (propertize (mpdired--short-name dir) 'face 'dired-directory))
+	     (insert (propertize (mpdired--short-name dir) 'face 'mpdired-directory))
 	     (put-text-property bol (line-end-position) 'type 'directory)
 	     (put-text-property bol (line-end-position) 'uri dir))))))
 
 (defun mpdired--insert-song (song)
   (let ((id (car song))
 	(uri (cadr song)))
-    (insert "  " (propertize uri 'face 'dired-ignored))
+    (insert "  " (propertize uri 'face 'mpdired-song))
     (let ((bol (mpdired--bol))
 	  (eol (line-end-position)))
       (put-text-property bol eol 'id id)
@@ -264,7 +276,7 @@
 	    (let* ((bol (mpdired--bol))
 		   (eol (line-end-position))
 		   (x (/ (* elapsed (- eol bol)) duration)))
-	      (put-text-property bol (+ bol x) 'face 'dired-special))))
+	      (put-text-property bol (+ bol x) 'face 'mpdired-progress))))
 	;; Set mode, restore point and memorize stuff
 	(mpdired-mode)
 	(when mpdired--queue-point
@@ -492,7 +504,7 @@
   (interactive)
   (let ((inhibit-read-only t))
     (remove-text-properties (mpdired--bol) (line-end-position) '(mark))
-    (put-text-property (mpdired--bol) (line-end-position) 'face 'dired-ignored)
+    (put-text-property (mpdired--bol) (line-end-position) 'face 'mpdired-song)
     (save-excursion
       (goto-char (line-beginning-position))
       (delete-char 1)
@@ -504,7 +516,7 @@
   (mpdired-previous-line)
   (let ((inhibit-read-only t))
     (remove-text-properties (mpdired--bol) (line-end-position) '(mark))
-    (put-text-property (mpdired--bol) (line-end-position) 'face 'dired-ignored)
+    (put-text-property (mpdired--bol) (line-end-position) 'face 'mpdired-song)
     (save-excursion
       (goto-char (line-beginning-position))
       (delete-char 1)
