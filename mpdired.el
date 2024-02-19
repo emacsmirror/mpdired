@@ -133,6 +133,7 @@
   (set-buffer-modified-p nil)
   (setq major-mode 'mpdired-mode
 	mode-name "MPDired"
+	truncate-lines t
 	buffer-read-only t))
 
 (defun mpdired--hostname (host service localp)
