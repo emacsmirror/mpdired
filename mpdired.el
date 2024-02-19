@@ -26,6 +26,7 @@
   "m"      'mpdired-mark-at-point
   "u"      'mpdired-unmark-at-point
   "<DEL>"  'mpdired-previous-unmark
+  "d"      'mpdired-mark-deletion-at-point
   ;; Only for queue
   "D"      'mpdired-delete)
 
@@ -156,12 +157,16 @@
 (defvar-local mpdired--queue-point nil
   "Saved point position in the queue view.")
 
+(defun mpdired--bol ()
+  "Correct beginning of line in a MPDired buffer."
+  (+ 2 (line-beginning-position)))
+
 (defun mpdired--short-name (string)
   (car (last (split-string string "/"))))
 
 (defun mpdired--insert-entry (entry)
   (insert "  ")
-  (let ((bol (line-beginning-position)))
+  (let ((bol (mpdired--bol)))
     (cond ((stringp entry)
 	   (insert (mpdired--short-name entry))
 	   (put-text-property bol (line-end-position) 'type 'file)
@@ -176,7 +181,7 @@
   (let ((id (car song))
 	(uri (cadr song)))
     (insert "  " (propertize uri 'face 'dired-ignored))
-    (let ((bol (line-beginning-position))
+    (let ((bol (mpdired--bol))
 	  (eol (line-end-position)))
       (put-text-property bol eol 'id id)
       (put-text-property bol eol 'uri uri))))
@@ -236,7 +241,8 @@
 	 (songid (car data))
 	 (elapsed (cadr data))
 	 (duration (caddr data))
-	 (songs (cdddr data)))
+	 (songs (cdddr data))
+	 (eob 0))
     (with-current-buffer (get-buffer-create main-buffer)
       (let ((inhibit-read-only t))
 	(erase-buffer)
@@ -251,10 +257,10 @@
 	;; on the URI.
 	(save-excursion
 	  (when songid
-	    (while (let ((id (get-text-property (point) 'id)))
-		     (and id (/= songid id)))
-	      (forward-line))
-	    (let* ((bol (line-beginning-position))
+	    (while (let ((id (get-text-property (mpdired--bol) 'id)))
+		     (and (zerop eob) id (/= songid id)))
+	      (setq eob (forward-line)))
+	    (let* ((bol (mpdired--bol))
 		   (eol (line-end-position))
 		   (x (/ (* elapsed (- eol bol)) duration)))
 	      (put-text-property bol (+ bol x) 'face 'dired-special))))
@@ -397,17 +403,17 @@
 (defun mpdired-next-line ()
   (interactive)
   (forward-line)
-  (goto-char (+ 2 (line-beginning-position)))
+  (goto-char (mpdired--bol))
   (mpdired--save-point))
 
 (defun mpdired-previous-line ()
   (interactive)
   (forward-line -1)
-  (goto-char (+ 2 (line-beginning-position)))
+  (goto-char (mpdired--bol))
   (mpdired--save-point))
 
 (defun mpdired-listall-at-point ()
-  (let* ((bol (line-beginning-position))
+  (let* ((bol (mpdired--bol))
 	 (type (get-text-property bol 'type))
 	 (uri (get-text-property bol 'uri)))
     (if (eq type 'directory)
@@ -415,9 +421,8 @@
       (message "Cannot browse a file."))))
 
 (defun mpdired-playid-at-point ()
-  (let ((id (get-text-property (line-beginning-position) 'id)))
-    (when id
-      (mpdired-playid-internal id))))
+  (let ((id (get-text-property (mpdired--bol) 'id)))
+    (when id (mpdired-playid-internal id))))
 
 (defun mpdired-enter ()
   (interactive)
@@ -463,25 +468,31 @@
 		  (mpdired-listall-internal "")))
 	       (t (mpdired-listall-internal ""))))))
 
-(defun mpdired-mark-at-point ()
-  (interactive)
-  (let ((bol (line-beginning-position))
-	(mark ?*)
-	(inhibit-read-only t))
-    (put-text-property bol (line-end-position) 'mark mark)
+(defun mpdired--mark (mark face)
+  (let ((inhibit-read-only t))
     (save-excursion
-      (goto-char bol)
+      (goto-char (line-beginning-position))
       (delete-char 1)
       (insert-char mark))
+    (put-text-property (mpdired--bol) (line-end-position) 'mark mark)
+    (put-text-property (mpdired--bol) (line-end-position) 'face face)
     (mpdired-next-line)))
+
+(defun mpdired-mark-at-point ()
+  (interactive)
+  (mpdired--mark ?* 'dired-marked))
+
+(defun mpdired-mark-deletion-at-point ()
+  (interactive)
+  (mpdired--mark ?d 'dired-flagged))
 
 (defun mpdired-unmark-at-point ()
   (interactive)
-  (let ((bol (line-beginning-position))
-	(inhibit-read-only t))
-    (remove-text-properties bol (line-end-position) '(mark))
+  (let ((inhibit-read-only t))
+    (remove-text-properties (mpdired--bol) (line-end-position) '(mark))
+    (put-text-property (mpdired--bol) (line-end-position) 'face 'dired-ignored)
     (save-excursion
-      (goto-char bol)
+      (goto-char (line-beginning-position))
       (delete-char 1)
       (insert-char ? ))
     (mpdired-next-line)))
@@ -489,13 +500,28 @@
 (defun mpdired-previous-unmark ()
   (interactive)
   (mpdired-previous-line)
-  (let ((bol (line-beginning-position))
-	(inhibit-read-only t))
-    (remove-text-properties bol (line-end-position) '(mark))
+  (let ((inhibit-read-only t))
+    (remove-text-properties (mpdired--bol) (line-end-position) '(mark))
+    (put-text-property (mpdired--bol) (line-end-position) 'face 'dired-ignored)
     (save-excursion
-      (goto-char bol)
+      (goto-char (line-beginning-position))
       (delete-char 1)
       (insert-char ? ))))
+
+(defun mpdired--collect-marked (want)
+  "Collect entries marked with WANT."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((eob 0)
+	  result)
+      (while (zerop eob)
+	(let* ((bol (mpdired--bol))
+	       (mark (get-text-property bol 'mark))
+	       (uri (get-text-property bol 'uri)))
+	  (when (and mark (char-equal mark want))
+	    (push uri result)))
+	(setq eob (forward-line)))
+      result)))
 
 (defun mpdired-add-at-point ()
   (interactive)
