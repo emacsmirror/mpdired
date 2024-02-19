@@ -290,7 +290,8 @@
 		 (mpdired--present-queue proc))))))))
 
 (defun mpdired--sentinel (process event)
-  (message "Process: %s had the event '%s'" process event))
+  (unless (string-search "connection broken" event)
+    (message "Process: %s had the event '%s'" process event)))
 
 (defun mpdired--local-p (host)
   ;; Hack: if the `expand-file-name' of host leads to an existing
