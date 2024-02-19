@@ -145,8 +145,6 @@
 ;; State variables for the main buffer
 (defvar-local mpdired--directory nil
   "Current directory of the browser view.")
-(defvar-local mpdired--previous-directory nil
-  "Previous directory of the browser view.")
 (defvar-local mpdired--view nil)
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
@@ -183,7 +181,7 @@
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
 	 (main-buffer (mpdired--main-name peer-host peer-service peer-localp))
 	 (content (mpdired--parse-listall))
-	 ascending-p)
+	 ascending-p previous-directory)
     ;; Retrieve infos from this process buffer
     (with-current-buffer (process-buffer proc)
       (setq ascending-p mpdired--ascending-p))
@@ -204,14 +202,14 @@
 	  (mpdired--insert-entry (car (last data))))
 	;; Set mode and memorize stuff
 	(mpdired-mode)
-	(if ascending-p (setq mpdired--previous-directory mpdired--directory))
+	(if ascending-p (setq previous-directory mpdired--directory))
 	(setq mpdired--directory (when top top)
 	      mpdired--comm-buffer (process-buffer proc)
 	      mpdired--view 'browser)
 	;; Finally move point to the correct place.
-	(cond ((and ascending-p mpdired--previous-directory)
+	(cond ((and ascending-p previous-directory)
 	       (goto-char (point-min))
-	       (re-search-forward mpdired--previous-directory nil t)
+	       (re-search-forward previous-directory nil t)
 	       (goto-char (line-beginning-position))
 	       (setq mpdired--browser-point (point)))
 	      (mpdired--browser-point
