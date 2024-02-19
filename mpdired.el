@@ -224,7 +224,7 @@
 	(cond ((and ascending-p previous-directory)
 	       (goto-char (point-min))
 	       (re-search-forward previous-directory nil t)
-	       (goto-char (line-beginning-position))
+	       (goto-char (mpdired--bol))
 	       (setq mpdired--browser-point (point)))
 	      (mpdired--browser-point
 	       (goto-char mpdired--browser-point))
