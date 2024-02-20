@@ -97,6 +97,7 @@
 (defvar-local mpdired--main-buffer nil
   "Link to the main MPDired buffer")
 (defvar-local mpdired--ascending-p nil)
+(defvar-local mpdired--message nil)
 
 (defun mpdired--parse-listall-1 (current accum)
   ;; Recursively rebuild the directory hierarchy from a "listall"
@@ -362,7 +363,9 @@
 		 (mpdired--present-listall proc))
 		((or (eq mpdired--last-command 'queue)
 		     (eq mpdired--last-command 'deleteid))
-		 (mpdired--present-queue proc))))))))
+		 (mpdired--present-queue proc)))
+	  (when mpdired--message
+	    (message (format "%s done." mpdired--message))))))))
 
 (defun mpdired--sentinel (process event)
   (unless (string-search "connection broken" event)
@@ -602,11 +605,25 @@
 	(forward-line))
       result)))
 
+(defun mpdired--reset-message ()
+  (with-current-buffer mpdired--comm-buffer
+    (setq mpdired--message nil)))
+
+(defun mpdired--append-message (message)
+  "Put a message for the communication buffer."
+  (with-current-buffer mpdired--comm-buffer
+    (if mpdired--message
+	(setq (format "%s %s" mpdired--message message))
+      (setq mpdired--message message))))
+
 (defun mpdired-add-at-point ()
   (interactive)
   (let* ((bol (mpdired--bol))
 	 (uri (get-text-property bol 'uri)))
-    (when uri (mpdired-add-internal uri))))
+    (when uri
+      (mpdired--reset-message)
+      (mpdired--append-message (format "Adding %s…" uri))
+      (mpdired-add-internal uri))))
 
 (defun mpdired-deleteid-at-point ()
   (let ((id (get-text-property (mpdired--bol) 'id)))
