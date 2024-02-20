@@ -317,8 +317,7 @@
 	 (songid (car data))
 	 (elapsed (cadr data))
 	 (duration (caddr data))
-	 (songs (cdddr data))
-	 (eob 0))
+	 (songs (cdddr data)))
     (with-current-buffer (get-buffer-create main-buffer)
       (let ((inhibit-read-only t))
 	(erase-buffer)
@@ -331,9 +330,11 @@
 	;; on the URI.
 	(save-excursion
 	  (when songid
-	    (while (let ((id (get-text-property (mpdired--bol) 'id)))
-		     (and (zerop eob) id (/= songid id)))
-	      (setq eob (forward-line)))
+	    (let ((max (point-max)))
+	      (while (and (< (point) max)
+			  (let ((id (get-text-property (mpdired--bol) 'id)))
+			    (and  id (/= songid id))))
+		(forward-line)))
 	    (let* ((bol (mpdired--bol))
 		   (eol (line-end-position))
 		   (x (/ (* elapsed (- eol bol)) duration)))
@@ -590,15 +591,15 @@
   "Collect entries marked with WANT."
   (save-excursion
     (goto-char (point-min))
-    (let ((eob 0)
+    (let ((max (point-max))
 	  result)
-      (while (zerop eob)
+      (while (< (point) max)
 	(let* ((bol (mpdired--bol))
 	       (mark (get-text-property bol 'mark))
 	       (id (get-text-property bol 'id)))
 	  (when (and mark (char-equal mark want))
 	    (push id result)))
-	(setq eob (forward-line)))
+	(forward-line))
       result)))
 
 (defun mpdired-add-at-point ()
