@@ -282,10 +282,9 @@
 	;; Insert the content
 	(save-excursion
 	  (if top (insert (propertize top 'face 'dired-header) ":\n"))
-	  (dolist (e (butlast data))
+	  (dolist (e data)
 	    (mpdired--insert-entry e)
-	    (insert "\n"))
-	  (mpdired--insert-entry (car (last data))))
+	    (insert "\n")))
 	;; Set mode and memorize stuff
 	(mpdired-mode)
 	(if ascending-p (setq previous-directory mpdired--directory))
@@ -321,11 +320,9 @@
 	(erase-buffer)
 	;; Insert songs
 	(save-excursion
-	  (dolist (song (butlast songs))
+	  (dolist (song songs)
 	    (mpdired--insert-song song)
-	    (insert "\n"))
-	  (when songs
-	    (mpdired--insert-song (car (last songs)))))
+	    (insert "\n")))
 	;; Go to the current song and display elasped time with a face
 	;; on the URI.
 	(save-excursion
