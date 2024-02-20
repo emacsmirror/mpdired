@@ -259,6 +259,10 @@
       (put-text-property bol eol 'type 'song)
       (put-text-property bol eol 'uri uri))))
 
+(defun mpdired--reset-point (point)
+  (goto-char point)
+  (goto-char (mpdired--bol)))
+
 (defun mpdired--present-listall (proc)
   ;; Called by filter of the communication buffer.
   (let* ((peer-info (process-contact proc t))
@@ -298,7 +302,7 @@
 	       (goto-char (mpdired--bol))
 	       (setq mpdired--browser-point (point)))
 	      (mpdired--browser-point
-	       (goto-char mpdired--browser-point))
+	       (mpdired--reset-point mpdired--browser-point))
 	      (t (goto-char (point-min))
 		 (when top (mpdired-next-line))))))))
 
@@ -337,7 +341,7 @@
 	;; Set mode, restore point and memorize stuff
 	(mpdired-mode)
 	(when mpdired--queue-point
-	  (goto-char mpdired--queue-point))
+	  (mpdired--reset-point mpdired--queue-point))
 	(setq mpdired--comm-buffer (process-buffer proc)
 	      mpdired--view 'queue)))))
 
