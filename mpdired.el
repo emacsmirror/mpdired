@@ -27,7 +27,8 @@
   "u"      'mpdired-unmark-at-point
   "<DEL>"  'mpdired-previous-unmark
   "d"      'mpdired-mark-deletion-at-point
-  ;; Only for queue
+  ;; Only in the queue view
+  "x"      'mpdired-flagged-delete
   "D"      'mpdired-delete)
 
 (defface mpdired-song
@@ -41,6 +42,14 @@
 (defface mpdired-directory
   '((t :inherit dired-directory))
   "Face used to show a directory.")
+
+(defface mpdired-marked
+  '((t :inherit dired-marked))
+  "Face used to show a marked entry.")
+
+(defface mpdired-flagged
+  '((t :inherit dired-flagged))
+  "Face used to show an entry flagged for deletion.")
 
 (defun mpdired--subdir-p (dir-a dir-b)
   (let ((pos (string-search dir-a dir-b)))
@@ -177,6 +186,21 @@
 (defun mpdired--short-name (string)
   (car (last (split-string string "/"))))
 
+(defun mpdired--reset-face ()
+  (let* ((bol (mpdired--bol))
+	 (eol (line-end-position))
+	 (type (get-text-property bol 'type))
+	 (mark (get-text-property bol 'mark)))
+    (remove-text-properties bol eol '(face))
+    (cond ((and mark (char-equal mark ?d))
+	   (put-text-property bol eol 'face 'mpdired-flagged))
+	  ((and mark (char-equal mark ?*))
+	   (put-text-property bol eol 'face 'mpdired-marked))
+	  ((eq type 'directory)
+	   (put-text-property bol eol 'face 'mpdired-directory))
+	  ((eq type 'song)
+	   (put-text-property bol eol 'face 'mpdired-song)))))
+
 (defun mpdired--insert-entry (entry)
   (insert "  ")
   (let ((bol (mpdired--bol)))
@@ -197,6 +221,7 @@
     (let ((bol (mpdired--bol))
 	  (eol (line-end-position)))
       (put-text-property bol eol 'id id)
+      (put-text-property bol eol 'type 'song)
       (put-text-property bol eol 'uri uri))))
 
 (defun mpdired--present-listall (proc)
@@ -376,7 +401,10 @@
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'deleteid)
     (process-send-string process "command_list_begin\n")
-    (process-send-string process (format "deleteid %d\n" id))
+    (if (listp id)
+	(dolist (i id)
+	  (process-send-string process (format "deleteid %d\n" i)))
+      (process-send-string process (format "deleteid %d\n" id)))
     ;; XXX A playlistid should always be preceded by a status
     (process-send-string process "status\n")
     (process-send-string process "playlistid\n")
@@ -482,29 +510,29 @@
 		  (mpdired-listall-internal "")))
 	       (t (mpdired-listall-internal ""))))))
 
-(defun mpdired--mark (mark face)
+(defun mpdired--mark (mark)
   (let ((inhibit-read-only t))
     (save-excursion
       (goto-char (line-beginning-position))
       (delete-char 1)
       (insert-char mark))
     (put-text-property (mpdired--bol) (line-end-position) 'mark mark)
-    (put-text-property (mpdired--bol) (line-end-position) 'face face)
+    (mpdired--reset-face)
     (mpdired-next-line)))
 
 (defun mpdired-mark-at-point ()
   (interactive)
-  (mpdired--mark ?* 'dired-marked))
+  (mpdired--mark ?*))
 
 (defun mpdired-mark-deletion-at-point ()
   (interactive)
-  (mpdired--mark ?d 'dired-flagged))
+  (mpdired--mark ?d))
 
 (defun mpdired-unmark-at-point ()
   (interactive)
   (let ((inhibit-read-only t))
-    (remove-text-properties (mpdired--bol) (line-end-position) '(mark))
-    (put-text-property (mpdired--bol) (line-end-position) 'face 'mpdired-song)
+    (remove-text-properties (mpdired--bol) (line-end-position) '(mark face))
+    (mpdired--reset-face)
     (save-excursion
       (goto-char (line-beginning-position))
       (delete-char 1)
@@ -516,7 +544,7 @@
   (mpdired-previous-line)
   (let ((inhibit-read-only t))
     (remove-text-properties (mpdired--bol) (line-end-position) '(mark))
-    (put-text-property (mpdired--bol) (line-end-position) 'face 'mpdired-song)
+    (mpdired--reset-face)
     (save-excursion
       (goto-char (line-beginning-position))
       (delete-char 1)
@@ -531,9 +559,9 @@
       (while (zerop eob)
 	(let* ((bol (mpdired--bol))
 	       (mark (get-text-property bol 'mark))
-	       (uri (get-text-property bol 'uri)))
+	       (id (get-text-property bol 'id)))
 	  (when (and mark (char-equal mark want))
-	    (push uri result)))
+	    (push id result)))
 	(setq eob (forward-line)))
       result)))
 
@@ -551,6 +579,12 @@
   (interactive)
   (cond ((eq mpdired--view 'queue)
 	 (mpdired-deleteid-at-point))))
+
+(defun mpdired-flagged-delete ()
+  (interactive)
+  (when (eq mpdired--view 'queue)
+    (let ((flagged (mpdired--collect-marked ?d)))
+      (when flagged (mpdired-deleteid-internal flagged)))))
 
 (defun mpdired-update ()
   (interactive)
