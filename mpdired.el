@@ -62,6 +62,7 @@
   "u"      'mpdired-unmark-at-point
   "<DEL>"  'mpdired-previous-unmark
   "d"      'mpdired-mark-deletion-at-point
+  "t"      'mpdired-toggle-marks
   ;; Only in the queue view
   "x"      'mpdired-flagged-delete
   "D"      'mpdired-delete)
@@ -587,27 +588,43 @@
       (delete-char 1)
       (insert-char mark))
     (put-text-property (mpdired--bol) (line-end-position) 'mark mark)
-    (mpdired--reset-face)
-    (mpdired-next-line)))
+    (mpdired--reset-face)))
 
-(defun mpdired-mark-at-point ()
-  (interactive)
-  (mpdired--mark ?*))
-
-(defun mpdired-mark-deletion-at-point ()
-  (interactive)
-  (mpdired--mark ?d))
-
-(defun mpdired-unmark-at-point ()
-  (interactive)
+(defun mpdired--clear-mark ()
   (let ((inhibit-read-only t))
     (remove-text-properties (mpdired--bol) (line-end-position) '(mark face))
     (mpdired--reset-face)
     (save-excursion
       (goto-char (line-beginning-position))
       (delete-char 1)
-      (insert-char ? ))
-    (mpdired-next-line)))
+      (insert-char ? ))))
+
+(defun mpdired-mark-at-point ()
+  (interactive)
+  (mpdired--mark ?*)
+  (mpdired-next-line))
+
+(defun mpdired-mark-deletion-at-point ()
+  (interactive)
+  (mpdired--mark ?d)
+  (mpdired-next-line))
+
+(defun mpdired-toggle-marks ()
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (let ((max (point-max)))
+      (while (< (point) max)
+	(let ((mark (get-text-property (mpdired--bol) 'mark)))
+	  (if (and mark (char-equal mark ?*))
+	      (mpdired--clear-mark)
+	    (mpdired--mark ?*)))
+	(forward-line)))))
+
+(defun mpdired-unmark-at-point ()
+  (interactive)
+  (mpdired--clear-mark)
+  (mpdired-next-line))
 
 (defun mpdired-previous-unmark ()
   (interactive)
