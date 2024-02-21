@@ -325,7 +325,9 @@
 	      (mpdired--browser-point
 	       (mpdired--reset-point mpdired--browser-point))
 	      (t (goto-char (point-min))
-		 (when top (mpdired-next-line))))))))
+		 (if top
+		     (mpdired-next-line)
+		   (goto-char (mpdired--bol)))))))))
 
 (defun mpdired--present-queue (proc)
   ;; Called by filter of the communication buffer.
@@ -360,6 +362,8 @@
 		   (eol (line-end-position))
 		   (x (/ (* elapsed (- eol bol)) duration)))
 	      (put-text-property bol (+ bol x) 'face 'mpdired-progress))))
+	;; Go to bol no matter what
+	(goto-char (mpdired--bol))
 	;; Set mode, restore point and memorize stuff
 	(mpdired-mode)
 	(when mpdired--songid-point
