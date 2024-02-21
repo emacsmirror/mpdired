@@ -286,7 +286,7 @@
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
 	 (main-buffer (mpdired--main-name peer-host peer-service peer-localp))
 	 (content (mpdired--parse-listall))
-	 ascending-p previous-directory)
+	 ascending-p from)
     ;; Retrieve infos from this process buffer
     (with-current-buffer (process-buffer proc)
       (setq ascending-p mpdired--ascending-p))
@@ -306,14 +306,19 @@
 	    (insert "\n")))
 	;; Set mode and memorize stuff
 	(mpdired-mode)
-	(if ascending-p (setq previous-directory mpdired--directory))
+	(if ascending-p (setq from mpdired--directory))
 	(setq mpdired--directory (when top top)
 	      mpdired--comm-buffer (process-buffer proc)
 	      mpdired--view 'browser)
 	;; Finally move point to the correct place.
-	(cond ((and ascending-p previous-directory)
+	(cond ((and ascending-p from)
 	       (goto-char (point-min))
-	       (re-search-forward previous-directory nil t)
+	       (let ((max (point-max)))
+		 (while (and (< (point) max)
+			     (let ((uri (get-text-property (mpdired--bol) 'uri)))
+			       (or (null uri)
+				   (and uri (not (string= from uri))))))
+		   (forward-line)))
 	       (goto-char (mpdired--bol))
 	       (setq mpdired--browser-point (point)))
 	      (mpdired--browser-point
@@ -348,7 +353,7 @@
 	    (let ((max (point-max)))
 	      (while (and (< (point) max)
 			  (let ((id (get-text-property (mpdired--bol) 'id)))
-			    (and  id (/= songid id))))
+			    (and id (/= songid id))))
 		(forward-line)))
 	    (let* ((bol (mpdired--bol))
 		   (eol (line-end-position))
@@ -379,7 +384,8 @@
 		     (eq mpdired--last-command 'deleteid))
 		 (mpdired--present-queue proc)))
 	  (when mpdired--message
-	    (message (format "%s done." mpdired--message))))))))
+	    (message (format "%s done." mpdired--message))
+	    (setq mpdired--message nil)))))))
 
 (defun mpdired--sentinel (process event)
   (unless (string-search "connection broken" event)
