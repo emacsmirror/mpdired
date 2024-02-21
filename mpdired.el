@@ -210,10 +210,13 @@
 (defvar-local mpdired--view nil)
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
+
+;; I tried to use markers but since I often erase the buffer content,
+;; these markers are reset to 1.
 (defvar-local mpdired--browser-point nil
   "Saved point position in the browser view.")
-(defvar-local mpdired--queue-point nil
-  "Saved point position in the queue view.")
+(defvar-local mpdired--songid-point nil
+  "Songid for point position in the queue view.")
 
 (defun mpdired--bol ()
   "Correct beginning of line in a MPDired buffer."
@@ -263,6 +266,13 @@
 (defun mpdired--reset-point (point)
   (goto-char point)
   (goto-char (mpdired--bol)))
+
+(defun mpdired--goto-id (songid)
+  (let ((max (point-max)))
+    (while (and (< (point) max)
+		(let ((id (get-text-property (mpdired--bol) 'id)))
+		  (and id (/= songid id))))
+      (mpdired--next-line))))
 
 (defun mpdired--present-listall (proc)
   ;; Called by filter of the communication buffer.
@@ -342,8 +352,8 @@
 	      (put-text-property bol (+ bol x) 'face 'mpdired-progress))))
 	;; Set mode, restore point and memorize stuff
 	(mpdired-mode)
-	(when mpdired--queue-point
-	  (mpdired--reset-point mpdired--queue-point))
+	(when mpdired--songid-point
+	  (mpdired--goto-id mpdired--songid-point))
 	(setq mpdired--comm-buffer (process-buffer proc)
 	      mpdired--view 'queue)))))
 
@@ -478,20 +488,30 @@
 
 (defun mpdired--save-point ()
   (cond ((eq mpdired--view 'queue)
-	 (setf mpdired--queue-point (point)))
+	 (let ((bol (mpdired--bol)))
+	   (unless (> bol (point-max))
+	     (setf mpdired--songid-point (get-text-property bol 'id)))))
 	((eq mpdired--view 'browser)
 	 (setf mpdired--browser-point (point)))))
 
-(defun mpdired-next-line ()
-  (interactive)
+(defun mpdired--next-line ()
   (forward-line)
-  (goto-char (mpdired--bol))
+  (goto-char (mpdired--bol)))
+
+(defun mpdired-next-line ()
+  "Next line with saving."
+  (interactive)
+  (mpdired--next-line)
   (mpdired--save-point))
 
-(defun mpdired-previous-line ()
-  (interactive)
+(defun mpdired--previous-line ()
   (forward-line -1)
-  (goto-char (mpdired--bol))
+  (goto-char (mpdired--bol)))
+
+(defun mpdired-previous-line ()
+  "Previous line with saving."
+  (interactive)
+  (mpdired--previous-line)
   (mpdired--save-point))
 
 (defun mpdired-listall-at-point ()
