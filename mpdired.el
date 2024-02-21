@@ -195,8 +195,12 @@
 
 (defun mpdired--hostname (host service localp)
   (if localp
-      (format "%s" host)
-    (format "%s:%s" host service)))
+      (let ((inode (file-attribute-inode-number
+		    (file-attributes service))))
+	(format "/%d" inode))
+    (if (= 6600 service)
+	host
+      (format "%s:%s" host service))))
 
 (defun mpdired--comm-name (host service localp)
   (format "*mpdired-%s*" (mpdired--hostname host service localp)))
