@@ -753,13 +753,23 @@
       (mpdired-add-internal uri)
       (mpdired-next-line))))
 
+(defun mpdired--build-add-message (uris)
+  (let ((n (length uris)))
+    (cond ((= n 1) (format "Adding %s..." (car uris)))
+	  ((= n 2)
+	   (format "Adding %s and %s..." (car uris) (cadr uris)))
+	  ((> n 2)
+	   (format "Adding %s, %s and %d others..."
+		   (car uris) (cadr uris) (- n 2))))))
+
 (defun mpdired-add ()
   (interactive)
   (let* ((marked (mpdired--collect-marked ?*))
 	 (uris (mapcar 'cdr marked)))
-    (if uris
-	(mpdired-add-internal uris)
-      (mpdired-add-at-point))))
+    (cond (uris
+	   (mpdired--append-message (mpdired--build-add-message uris))
+	   (mpdired-add-internal uris))
+	  (t (mpdired-add-at-point)))))
 
 (defun mpdired-deleteid-at-point ()
   (let ((id (get-text-property (mpdired--bol) 'id)))
