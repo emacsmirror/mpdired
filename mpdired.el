@@ -84,7 +84,8 @@
   "t"      #'mpdired-toggle-marks
   "* t"    #'mpdired-toggle-marks
   "* c"    #'mpdired-change-marks
-  ;; Only in the queue view
+  "% d"    #'mpdired-flag-files-regexp
+  "% m"    #'mpdired-mark-files-regexp
   "x"      #'mpdired-flagged-delete
   "D"      #'mpdired-delete)
 
@@ -700,6 +701,21 @@
 	    (push (cons id uri) result)))
 	(forward-line))
       result)))
+
+(defun mpdired-mark-files-regexp (regexp &optional mark)
+  (interactive (list (read-regexp "Mark (regexp): ")))
+  (save-excursion
+    (goto-char (point-min))
+    (let ((mark (or mark ?*))
+	  (max (point-max)))
+      (while (< (point) max)
+	(when (re-search-forward regexp (line-end-position) t)
+	  (mpdired--mark mark))
+	(forward-line)))))
+
+(defun mpdired-flag-files-regexp (regexp)
+  (interactive (list (read-regexp "Flag for deletion (regexp): ")))
+  (mpdired-mark-files-regexp regexp ?d))
 
 (defun mpdired--append-message (message)
   "Put a message for the communication buffer."
