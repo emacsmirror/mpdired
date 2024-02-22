@@ -87,7 +87,7 @@
   "<SPC>"  #'mpdired-pause-internal
   "N"      #'mpdired-next-internal
   "P"      #'mpdired-previous-internal
-  "a"      #'mpdired-add-at-point
+  "a"      #'mpdired-add
   ;; Marks
   "m"      #'mpdired-mark-at-point
   "* m"    #'mpdired-mark-at-point
@@ -497,7 +497,12 @@
 (defun mpdired-add-internal (uri)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'add)
-    (process-send-string process (format "add \"%s\"\n" uri))))
+    (process-send-string process "command_list_begin\n")
+    (if (listp uri)
+	(dolist (u uri)
+	  (process-send-string process (format "add \"%s\"\n" u)))
+      (process-send-string process (format "add \"%s\"\n" uri)))
+    (process-send-string process "command_list_end\n")))
 
 (defun mpdired-deleteid-internal (id)
   (mpdired--with-comm-buffer process nil
@@ -716,7 +721,7 @@
 	  (when (and mark (char-equal mark want))
 	    (push (cons id uri) result)))
 	(forward-line))
-      result)))
+      (reverse result))))
 
 (defun mpdired-mark-files-regexp (regexp &optional mark)
   (interactive (list (read-regexp "Mark (regexp): ")))
@@ -741,13 +746,20 @@
       (setq mpdired--message message))))
 
 (defun mpdired-add-at-point ()
-  (interactive)
   (let* ((bol (mpdired--bol))
 	 (uri (get-text-property bol 'uri)))
     (when uri
       (mpdired--append-message (format "Adding %s..." uri))
       (mpdired-add-internal uri)
       (mpdired-next-line))))
+
+(defun mpdired-add ()
+  (interactive)
+  (let* ((marked (mpdired--collect-marked ?*))
+	 (uris (mapcar 'cdr marked)))
+    (if uris
+	(mpdired-add-internal uris)
+      (mpdired-add-at-point))))
 
 (defun mpdired-deleteid-at-point ()
   (let ((id (get-text-property (mpdired--bol) 'id)))
