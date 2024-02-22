@@ -79,6 +79,8 @@
   "d"      'mpdired-flag-at-point
   "u"      'mpdired-unmark-at-point
   "<DEL>"  'mpdired-previous-unmark
+  "* !"    'mpdired-unmark-all-marks
+  "U"      'mpdired-unmark-all-marks
   "t"      'mpdired-toggle-marks
   "* t"    'mpdired-toggle-marks
   "* c"    'mpdired-change-marks
@@ -669,13 +671,17 @@
 (defun mpdired-previous-unmark ()
   (interactive)
   (mpdired-previous-line)
+  (mpdired--clear-mark))
+
+(defun mpdired-unmark-all-marks ()
+  (interactive)
   (let ((inhibit-read-only t))
-    (remove-text-properties (mpdired--bol) (line-end-position) '(mark))
-    (mpdired--reset-face)
     (save-excursion
-      (goto-char (line-beginning-position))
-      (delete-char 1)
-      (insert-char ? ))))
+      (goto-char (point-min))
+      (let ((max (point-max)))
+	(while (< (point) max)
+	  (mpdired--clear-mark)
+	  (forward-line))))))
 
 (defun mpdired--collect-marked (want)
   "Collect entries marked with WANT."
