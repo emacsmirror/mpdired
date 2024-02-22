@@ -28,14 +28,28 @@
 ;; inspired from Dired.  It features two views packed into the same
 ;; interactive buffer: the browser view and the queue view.
 ;;
-;; In those view, most of the interactions are mimic after Dired.
+;; In those view, most of the interactions are mimic after Dired mode
+;; with marks and action on them.  For example, in the queue view, you
+;; could flag songs for removal with `d' and then execute with `x'.
 
 ;;; Philosophy:
 ;;
 ;; MPDired is designed to be the least intrusive.  Nothing will be
 ;; shown into the mode line, which I consider to be user's territory.
 ;; There is no timers set by MPDired, so updating anything always
-;; comes from a user interaction.
+;; comes from a user action.
+;;
+;; The browser view is built only from the MPD's "listall" command.
+;; The MPD's documentation does *not* recommend to do so but AFAIU
+;; there is no other way to access your music collection in terms of
+;; directories and files.  As my music collection is already ordered
+;; into directories and with meaningful filenames, I prefer to use
+;; this interface rather then to rely on files' tags.
+;;
+;; If your music collection consists of just a set of not well named
+;; files into one big directory and that you rely on tags such as
+;; Genre, Album, Artist to find your way through it then, maybe,
+;; MPDired is not the right client for you.
 
 ;;; Bugs & Funs:
 ;;
