@@ -60,33 +60,33 @@
   :doc "Local keymap for MPDired."
   :full t
   :parent special-mode-map
-  "C-n"    'mpdired-next-line
-  "n"      'mpdired-next-line
-  "<down>" 'mpdired-next-line
-  "C-p"    'mpdired-previous-line
-  "p"      'mpdired-previous-line
-  "<up>"   'mpdired-previous-line
-  "C-m"    'mpdired-enter
-  "^"      'mpdired-goto-parent
-  "o"      'mpdired-toggle-view
-  "g"      'mpdired-update
-  "<SPC>"  'mpdired-pause-internal
-  "N"      'mpdired-next-internal
-  "P"      'mpdired-previous-internal
-  "a"      'mpdired-add-at-point
+  "C-n"    #'mpdired-next-line
+  "n"      #'mpdired-next-line
+  "<down>" #'mpdired-next-line
+  "C-p"    #'mpdired-previous-line
+  "p"      #'mpdired-previous-line
+  "<up>"   #'mpdired-previous-line
+  "C-m"    #'mpdired-enter
+  "^"      #'mpdired-goto-parent
+  "o"      #'mpdired-toggle-view
+  "g"      #'mpdired-update
+  "<SPC>"  #'mpdired-pause-internal
+  "N"      #'mpdired-next-internal
+  "P"      #'mpdired-previous-internal
+  "a"      #'mpdired-add-at-point
   ;; Marks
-  "m"      'mpdired-mark-at-point
-  "d"      'mpdired-flag-at-point
-  "u"      'mpdired-unmark-at-point
-  "<DEL>"  'mpdired-previous-unmark
-  "* !"    'mpdired-unmark-all-marks
-  "U"      'mpdired-unmark-all-marks
-  "t"      'mpdired-toggle-marks
-  "* t"    'mpdired-toggle-marks
-  "* c"    'mpdired-change-marks
+  "m"      #'mpdired-mark-at-point
+  "d"      #'mpdired-flag-at-point
+  "u"      #'mpdired-unmark-at-point
+  "<DEL>"  #'mpdired-previous-unmark
+  "* !"    #'mpdired-unmark-all-marks
+  "U"      #'mpdired-unmark-all-marks
+  "t"      #'mpdired-toggle-marks
+  "* t"    #'mpdired-toggle-marks
+  "* c"    #'mpdired-change-marks
   ;; Only in the queue view
-  "x"      'mpdired-flagged-delete
-  "D"      'mpdired-delete)
+  "x"      #'mpdired-flagged-delete
+  "D"      #'mpdired-delete)
 
 (defface mpdired-song
   '((t :inherit dired-ignored))
