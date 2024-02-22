@@ -28,8 +28,10 @@
 ;; inspired from Dired.  It features two views packed into the same
 ;; interactive buffer: the browser view and the queue view.
 
-;;; Bugs:
+;;; Bugs & Funs:
 ;;
+;; - URI based commands work in both view: in the queue, you can
+;;   append the song at point to the queue
 
 ;;; Code:
 
@@ -650,9 +652,10 @@
       (while (< (point) max)
 	(let* ((bol (mpdired--bol))
 	       (mark (get-text-property bol 'mark))
-	       (id (get-text-property bol 'id)))
+	       (id (get-text-property bol 'id))
+	       (uri (get-text-property bol 'uri)))
 	  (when (and mark (char-equal mark want))
-	    (push id result)))
+	    (push (cons id uri) result)))
 	(forward-line))
       result)))
 
@@ -688,8 +691,9 @@
 (defun mpdired-flagged-delete ()
   (interactive)
   (when (eq mpdired--view 'queue)
-    (let ((flagged (mpdired--collect-marked ?d)))
-      (when flagged (mpdired-deleteid-internal flagged)))))
+    (let* ((flagged (mpdired--collect-marked ?d))
+	   (ids (mapcar 'car flagged)))
+      (when flagged (mpdired-deleteid-internal ids)))))
 
 (defun mpdired-update ()
   (interactive)
