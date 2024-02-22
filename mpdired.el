@@ -466,7 +466,9 @@
 			      (current-buffer)))))))
 
 (defmacro mpdired--with-comm-buffer (process buffer &rest body)
-  "Helper macro when sending a command via the communication buffer."
+  "Helper macro when sending a command via the communication buffer.
+PROCESS will be bound to the communication buffer's process.  BUFFER is
+an optional communication buffer."
   (declare (indent defun))
   `(with-current-buffer (or ,buffer mpdired--comm-buffer)
      (erase-buffer)
@@ -738,7 +740,7 @@
   (mpdired-mark-files-regexp regexp ?d))
 
 (defun mpdired--append-message (message)
-  "Put a message for the communication buffer."
+  "Put a MESSAGE for the communication buffer."
   (with-current-buffer mpdired--comm-buffer
     (if mpdired--message
 	(setq (format "%s %s" mpdired--message message))
@@ -826,27 +828,32 @@
 
 ;; General commands (i.e. usable outside of the MPDired buffer).
 (defun mpdired-pause ()
+  "Toggle MPDired pause."
   (interactive)
   (let ((buffers (mpdired--prepare)))
     (mpdired-pause-internal (car buffers))))
 
 (defun mpdired-next ()
+  "Go to next song in the queue."
   (interactive)
   (let ((buffers (mpdired--prepare)))
     (mpdired-next-internal (car buffers))))
 
 (defun mpdired-previous ()
+  "Go to previous song in the queue."
   (interactive)
   (let ((buffers (mpdired--prepare)))
     (mpdired-previous-internal (car buffers))))
 
 (defun mpdired-set-volume (volume)
+  "Set MPDired volume."
   (interactive "nVolume: ")
   (let ((buffers (mpdired--prepare)))
     (mpdired-set-volume-internal (min 100 (max 0 volume)) (car buffers))))
 
 ;; Main entry point.
 (defun mpdired ()
+  "Open MPDired."
   (interactive)
   (let* ((buffers (mpdired--prepare))
 	 (comm (car buffers))
