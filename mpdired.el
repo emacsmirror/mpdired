@@ -241,7 +241,7 @@
       (format "%s:%s" host service))))
 
 (defun mpdired--comm-name (host service localp)
-  (format "*mpdired-%s*" (mpdired--hostname host service localp)))
+  (format " *mpdired-comm-%s*" (mpdired--hostname host service localp)))
 
 (defun mpdired--main-name (host service localp)
   (format "*MPDired (%s)*" (mpdired--hostname host service localp)))
@@ -451,7 +451,7 @@
     (erase-buffer)
     (let ((process (get-buffer-process (current-buffer))))
       (unless (and process (eq (process-status process) 'open))
-	(let ((params (list :name "mpdired"
+	(let ((params (list :name "mpdired-comm"
 			    :buffer (current-buffer)
 			    :host host
 			    :service service
