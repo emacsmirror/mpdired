@@ -146,10 +146,12 @@
   (catch 'exit
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
-			  (re-search-forward "^\\(OK\\|ACK.*\\)$" (line-end-position) t 1))))
+			  (re-search-forward "^\\(OK\\|ACK.*\\)$"
+					     (line-end-position) t 1))))
       ;; Look for file or directory line by line (I'm not interested
       ;; in playlist)
-      (re-search-forward "^\\(file\\|directory\\): \\(.*\\)$" (line-end-position) t 1)
+      (re-search-forward "^\\(file\\|directory\\): \\(.*\\)$"
+			 (line-end-position) t 1)
       (let ((type (match-string 1))
 	    (new (match-string 2)))
 	(cond ((string= "file" type) (push new accum))
@@ -188,7 +190,8 @@
 	result file time id)
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
-			  (re-search-forward "^\\(OK\\|ACK.*\\)$" (line-end-position) t 1))))
+			  (re-search-forward "^\\(OK\\|ACK.*\\)$"
+					     (line-end-position) t 1))))
       (let ((eol (line-end-position)))
         ;; First, "status" content
 	(when (re-search-forward "^songid: \\([0-9]+\\)$" eol t 1)
@@ -444,11 +447,13 @@
     (unless (and process (eq (process-status process) 'open))
       ;; Reconnect from saved parameters.
       (if mpdired--network-params
-	  (set-process-buffer (apply 'make-network-process mpdired--network-params)
-			      comm-buffer)))))
+	  (set-process-buffer
+	   (apply 'make-network-process mpdired--network-params)
+	   comm-buffer)))))
 
 (defun mpdired--maybe-init (host service localp)
-  (with-current-buffer (get-buffer-create (mpdired--comm-name host service localp))
+  (with-current-buffer (get-buffer-create
+			(mpdired--comm-name host service localp))
     (erase-buffer)
     (let ((process (get-buffer-process (current-buffer))))
       (unless (and process (eq (process-status process) 'open))
@@ -543,7 +548,8 @@ an optional communication buffer."
   (interactive "nVolume: ")
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'setvol)
-    (process-send-string process (format "setvol %d\n" (min 100 (max 0 volume))))))
+    (process-send-string process
+			 (format "setvol %d\n" (min 100 (max 0 volume))))))
 
 (defun mpdired--save-point ()
   (cond ((eq mpdired--view 'queue)
