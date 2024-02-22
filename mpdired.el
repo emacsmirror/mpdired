@@ -714,7 +714,8 @@
 	 (uri (get-text-property bol 'uri)))
     (when uri
       (mpdired--append-message (format "Adding %s..." uri))
-      (mpdired-add-internal uri))))
+      (mpdired-add-internal uri)
+      (mpdired-next-line))))
 
 (defun mpdired-deleteid-at-point ()
   (let ((id (get-text-property (mpdired--bol) 'id)))
