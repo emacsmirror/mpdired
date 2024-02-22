@@ -88,6 +88,7 @@
   "N"      #'mpdired-next-internal
   "P"      #'mpdired-previous-internal
   "a"      #'mpdired-add
+  "v"      #'mpdired-set-volume-internal
   ;; Marks
   "m"      #'mpdired-mark-at-point
   "* m"    #'mpdired-mark-at-point
@@ -133,7 +134,7 @@
 (defvar-local mpdired--parse-endp nil)
 (defvar-local mpdired--last-command nil)
 (defvar-local mpdired--main-buffer nil
-  "Link to the main MPDired buffer")
+  "Link to the main MPDired buffer.")
 (defvar-local mpdired--ascending-p nil)
 (defvar-local mpdired--message nil)
 
@@ -536,13 +537,11 @@
     (setq mpdired--last-command 'previous)
     (process-send-string process "previous\n")))
 
-;; XXX for debugging
-(defun mpdired-status-internal ()
-  (mpdired--with-comm-buffer process nil
-    (setq mpdired--last-command 'status)
-    (process-send-string process "command_list_begin\n")
-    (process-send-string process "status\n")
-    (process-send-string process "command_list_end\n")))
+(defun mpdired-set-volume-internal (volume &optional buffer)
+  (interactive "nVolume: ")
+  (mpdired--with-comm-buffer process buffer
+    (setq mpdired--last-command 'setvol)
+    (process-send-string process (format "setvol %d\n" (min 100 (max 0 volume))))))
 
 (defun mpdired--save-point ()
   (cond ((eq mpdired--view 'queue)
@@ -841,6 +840,11 @@
   (let ((buffers (mpdired--prepare)))
     (mpdired-previous-internal (car buffers))))
 
+(defun mpdired-set-volume (volume)
+  (interactive "nVolume: ")
+  (let ((buffers (mpdired--prepare)))
+    (mpdired-set-volume-internal (min 100 (max 0 volume)) (car buffers))))
+
 ;; Main entry point.
 (defun mpdired ()
   (interactive)
@@ -852,3 +856,4 @@
     (pop-to-buffer main)))
 
 (provide 'mpdired)
+;;; mpdired.el ends here
