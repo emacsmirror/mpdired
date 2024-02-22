@@ -515,7 +515,8 @@
 (defun mpdired-pause-internal (&optional buffer)
   (interactive)
   (mpdired--with-comm-buffer process buffer
-    (setq mpdired--last-command 'pause)
+    (setq mpdired--last-command 'pause
+	  mpdired--message "Toggle pause...")
     (process-send-string process "pause\n")))
 
 (defun mpdired-next-internal (&optional buffer)
