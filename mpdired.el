@@ -76,6 +76,7 @@
   "a"      #'mpdired-add-at-point
   ;; Marks
   "m"      #'mpdired-mark-at-point
+  "* m"    #'mpdired-mark-at-point
   "d"      #'mpdired-flag-at-point
   "u"      #'mpdired-unmark-at-point
   "<DEL>"  #'mpdired-previous-unmark
