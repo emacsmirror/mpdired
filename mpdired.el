@@ -173,7 +173,7 @@
 	result file time id)
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
-			  (re-search-forward "^OK$" (line-end-position) t 1))))
+			  (re-search-forward "^\\(OK\\|ACK.*\\)$" (line-end-position) t 1))))
       (let ((eol (line-end-position)))
         ;; First, "status" content
 	(when (re-search-forward "^songid: \\([0-9]+\\)$" eol t 1)
