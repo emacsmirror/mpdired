@@ -681,19 +681,34 @@
 
 (defun mpdired-deleteid-at-point ()
   (let ((id (get-text-property (mpdired--bol) 'id)))
-    (when id (mpdired-deleteid-internal id))))
+    (when id
+      (save-excursion
+	(forward-line)
+	(setq mpdired--songid-point
+	      (get-text-property (mpdired--bol) 'id)))
+      (mpdired-deleteid-internal id))))
 
 (defun mpdired-delete ()
   (interactive)
   (cond ((eq mpdired--view 'queue)
 	 (mpdired-deleteid-at-point))))
 
+(defun mpdired--find-next-unmarked-id ()
+  (save-excursion
+    (let ((max (point-max)))
+      (while (and (< (point) max)
+		  (get-text-property (mpdired--bol) 'mark))
+	(forward-line))
+      (get-text-property (mpdired--bol) 'id))))
+
 (defun mpdired-flagged-delete ()
   (interactive)
   (when (eq mpdired--view 'queue)
     (let* ((flagged (mpdired--collect-marked ?d))
 	   (ids (mapcar 'car flagged)))
-      (when flagged (mpdired-deleteid-internal ids)))))
+      (when flagged
+	(setf mpdired--songid-point (mpdired--find-next-unmarked-id))
+	(mpdired-deleteid-internal ids)))))
 
 (defun mpdired-update ()
   (interactive)
