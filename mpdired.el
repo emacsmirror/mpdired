@@ -616,13 +616,15 @@
     (mpdired--reset-face)))
 
 (defun mpdired--clear-mark ()
-  (let ((inhibit-read-only t))
-    (remove-text-properties (mpdired--bol) (line-end-position) '(mark face))
-    (mpdired--reset-face)
-    (save-excursion
-      (goto-char (line-beginning-position))
-      (delete-char 1)
-      (insert-char ? ))))
+  (let ((inhibit-read-only t)
+	(bol (mpdired--bol)))
+    (when (get-text-property bol 'mark)
+      (remove-text-properties (mpdired--bol) (line-end-position) '(mark face))
+      (mpdired--reset-face)
+      (save-excursion
+	(goto-char (line-beginning-position))
+	(delete-char 1)
+	(insert-char ? )))))
 
 (defun mpdired-mark-at-point ()
   (interactive)
