@@ -722,8 +722,10 @@
     (when id
       (save-excursion
 	(forward-line)
-	(setq mpdired--songid-point
-	      (get-text-property (mpdired--bol) 'id)))
+	(let ((bol (mpdired--bol)))
+	  (unless (>= bol (point-max))
+	    (setq mpdired--songid-point
+		  (get-text-property bol 'id)))))
       (mpdired-deleteid-internal id))))
 
 (defun mpdired-delete ()
@@ -737,7 +739,8 @@
       (while (and (< (point) max)
 		  (get-text-property (mpdired--bol) 'mark))
 	(forward-line))
-      (get-text-property (mpdired--bol) 'id))))
+      (unless (>= (mpdired--bol) max)
+	(get-text-property (mpdired--bol) 'id)))))
 
 (defun mpdired-flagged-delete ()
   (interactive)
