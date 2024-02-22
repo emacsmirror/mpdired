@@ -27,11 +27,24 @@
 ;; This a client for the Music Player Daemon (mpd) with interactions
 ;; inspired from Dired.  It features two views packed into the same
 ;; interactive buffer: the browser view and the queue view.
+;;
+;; In those view, most of the interactions are mimic after Dired.
+
+;;; Philosophy:
+;;
+;; MPDired is designed to be the least intrusive.  Nothing will shown
+;; into the mode line, which I consider to be user's territory.  There
+;; is no timers set by MPDired, so updating anything always comes from
+;; a user interaction.
 
 ;;; Bugs & Funs:
 ;;
-;; - URI based commands work in both view: in the queue, you can
-;;   append the song at point to the queue
+;; - Marks are really temporary.  As I rebuild the views often and the
+;;   mark is only stored in text property they will be wipe out
+;;   regularly.
+;;
+;; - some URI based commands work in both view. So for example, in the
+;;   queue, you can append the song at point to this same queue.
 
 ;;; Code:
 
