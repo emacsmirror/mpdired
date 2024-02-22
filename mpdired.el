@@ -701,10 +701,6 @@
 	(forward-line))
       result)))
 
-(defun mpdired--reset-message ()
-  (with-current-buffer mpdired--comm-buffer
-    (setq mpdired--message nil)))
-
 (defun mpdired--append-message (message)
   "Put a message for the communication buffer."
   (with-current-buffer mpdired--comm-buffer
@@ -717,8 +713,7 @@
   (let* ((bol (mpdired--bol))
 	 (uri (get-text-property bol 'uri)))
     (when uri
-      (mpdired--reset-message)
-      (mpdired--append-message (format "Adding %s…" uri))
+      (mpdired--append-message (format "Adding %s..." uri))
       (mpdired-add-internal uri))))
 
 (defun mpdired-deleteid-at-point ()
