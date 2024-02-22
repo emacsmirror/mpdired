@@ -32,10 +32,10 @@
 
 ;;; Philosophy:
 ;;
-;; MPDired is designed to be the least intrusive.  Nothing will shown
-;; into the mode line, which I consider to be user's territory.  There
-;; is no timers set by MPDired, so updating anything always comes from
-;; a user interaction.
+;; MPDired is designed to be the least intrusive.  Nothing will be
+;; shown into the mode line, which I consider to be user's territory.
+;; There is no timers set by MPDired, so updating anything always
+;; comes from a user interaction.
 
 ;;; Bugs & Funs:
 ;;
@@ -58,6 +58,8 @@
 
 (defvar-keymap mpdired-mode-map
   :doc "Local keymap for MPDired."
+  :full t
+  :parent special-mode-map
   "C-n"    'mpdired-next-line
   "n"      'mpdired-next-line
   "<down>" 'mpdired-next-line
@@ -68,16 +70,18 @@
   "^"      'mpdired-goto-parent
   "o"      'mpdired-toggle-view
   "g"      'mpdired-update
-  "q"      'bury-buffer
   "<SPC>"  'mpdired-pause-internal
   "N"      'mpdired-next-internal
   "P"      'mpdired-previous-internal
   "a"      'mpdired-add-at-point
+  ;; Marks
   "m"      'mpdired-mark-at-point
+  "d"      'mpdired-flag-at-point
   "u"      'mpdired-unmark-at-point
   "<DEL>"  'mpdired-previous-unmark
-  "d"      'mpdired-mark-deletion-at-point
   "t"      'mpdired-toggle-marks
+  "* t"    'mpdired-toggle-marks
+  "* c"    'mpdired-change-marks
   ;; Only in the queue view
   "x"      'mpdired-flagged-delete
   "D"      'mpdired-delete)
@@ -623,7 +627,7 @@
   (mpdired--mark ?*)
   (mpdired-next-line))
 
-(defun mpdired-mark-deletion-at-point ()
+(defun mpdired-flag-at-point ()
   (interactive)
   (mpdired--mark ?d)
   (mpdired-next-line))
@@ -639,6 +643,23 @@
 	      (mpdired--clear-mark)
 	    (mpdired--mark ?*)))
 	(forward-line)))))
+
+(defun mpdired-change-marks (&optional old new)
+  (interactive
+   (let* ((cursor-in-echo-area t)
+	  (old (progn (message "Change (old mark): ") (read-char)))
+	  (new (progn (message  "Change %c marks to (new mark): " old)
+		      (read-char))))
+     (list old new)))
+  (let ((inhibit-read-only t))
+    (save-excursion
+      (goto-char (point-min))
+      (let ((max (point-max)))
+	(while (< (point) max)
+	  (let ((mark (get-text-property (mpdired--bol) 'mark)))
+	    (when (and mark (char-equal mark old))
+	      (mpdired--mark new)))
+	  (forward-line))))))
 
 (defun mpdired-unmark-at-point ()
   (interactive)
