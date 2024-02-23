@@ -187,6 +187,7 @@
 	(duration 1)
 	(songid 0)
 	(in-status-p t)
+	state volume repeat random single consume
 	result file time id)
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
@@ -194,16 +195,31 @@
 					     (line-end-position) t 1))))
       (let ((eol (line-end-position)))
         ;; First, "status" content
-	(when (re-search-forward "^songid: \\([0-9]+\\)$" eol t 1)
-	  (setq songid (string-to-number (match-string 1))))
-	(when (re-search-forward "^time: \\([0-9]+\\):\\([0-9]+\\)$" eol t 1)
-	  (setq elapsed (string-to-number (match-string 1))
-		duration (string-to-number (match-string 2))))
+	(when in-status-p
+	  (when (re-search-forward "^state: \\(.*\\)$" eol t 1)
+	    (setq state (match-string 1)))
+	  (when (re-search-forward "^volume: \\([0-9]+\\)$" eol t 1)
+	    (setq volume (string-to-number (match-string 1))))
+	  (when (re-search-forward "^repeat: \\([0-9]+\\)$" eol t 1)
+	    (setq repeat (string= "1" (match-string 1))))
+	  (when (re-search-forward "^random: \\([0-9]+\\)$" eol t 1)
+	    (setq random (string= "1" (match-string 1))))
+	  (when (re-search-forward "^single: \\([0-9]+\\)$" eol t 1)
+	    (setq single (string= "1" (match-string 1))))
+	  (when (re-search-forward "^consume: \\([0-9]+\\)$" eol t 1)
+	    (setq consume (string= "1" (match-string 1))))
+	  ;; current song status
+	  (when (re-search-forward "^songid: \\([0-9]+\\)$" eol t 1)
+	    (setq songid (string-to-number (match-string 1))))
+	  (when (re-search-forward "^time: \\([0-9]+\\):\\([0-9]+\\)$" eol t 1)
+	    (setq elapsed (string-to-number (match-string 1))
+		  duration (string-to-number (match-string 2)))))
 	;; When we enconter our first "file:" the status parsing is
 	;; done so store what we've discovered so far.
 	(when (and in-status-p
 		   (save-excursion (re-search-forward "^file: .*$" eol t 1)))
 	  (setq in-status-p nil)
+	  (push (list state volume repeat random single consume) result)
 	  (push songid result)
           (push elapsed result)
 	  (push duration result))
@@ -299,6 +315,25 @@
 	     (put-text-property bol (line-end-position) 'type 'directory)
 	     (put-text-property bol (line-end-position) 'uri dir))))))
 
+(defun mpdired--insert-status (status)
+  (let* ((state (car status))
+	 (volume (nth 1 status))
+	 (repeat (nth 2 status))
+	 (random (nth 3 status))
+	 (single (nth 4 status))
+	 (consume (nth 5 status))
+	 (string (cond ((string= "stop" state) "")
+		       ((string= "play" state) "Playing")
+		       ((string= "pause" state) "Paused"))))
+    (insert (propertize string 'face 'bold))
+    (when (numberp volume)
+      (insert (format " Volume: %d" volume)))
+    (when repeat (insert " Repeat"))
+    (when random (insert " Random"))
+    (when single (insert " Single"))
+    (when consume (insert " Consume"))
+    (insert "\n")))
+
 (defun mpdired--insert-song (song)
   (let ((id (car song))
 	(uri (cadr song)))
@@ -317,7 +352,8 @@
   (let ((max (point-max)))
     (while (and (< (point) max)
 		(let ((id (get-text-property (mpdired--bol) 'id)))
-		  (and id (/= songid id))))
+		  (or (null id)
+		      (and id (/= songid id)))))
       (mpdired--next-line))))
 
 (defun mpdired--present-listall (proc)
@@ -378,26 +414,32 @@
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
 	 (main-buffer (mpdired--main-name peer-host peer-service peer-localp))
 	 (data (mpdired--parse-queue))
-	 (songid (car data))
-	 (elapsed (cadr data))
-	 (duration (caddr data))
-	 (songs (cdddr data)))
+	 (status (car data))
+	 (songid (nth 1 data))
+	 (elapsed (nth 2 data))
+	 (duration (nth 3 data))
+	 (songs (nthcdr 4 data)))
     (with-current-buffer (get-buffer-create main-buffer)
       (let ((inhibit-read-only t))
 	(erase-buffer)
-	;; Insert songs
+	;; Insert content
 	(save-excursion
+	  ;; State header
+	  (goto-char (point-min))
+	  (mpdired--insert-status status)
+	  ;; Songs
 	  (dolist (song songs)
 	    (mpdired--insert-song song)
 	    (insert "\n")))
 	;; Go to the current song and display elasped time with a face
-	;; on the URI.
+	;; on its URI.
 	(save-excursion
 	  (when songid
 	    (let ((max (point-max)))
 	      (while (and (< (point) max)
 			  (let ((id (get-text-property (mpdired--bol) 'id)))
-			    (and id (/= songid id))))
+			    (or (null id)
+				(and id (/= songid id)))))
 		(forward-line)))
 	    (let* ((bol (mpdired--bol))
 		   (eol (line-end-position))
