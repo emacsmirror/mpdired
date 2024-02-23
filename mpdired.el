@@ -713,12 +713,13 @@ an optional communication buffer."
 
 (defun mpdired--mark (mark)
   (let ((inhibit-read-only t))
-    (save-excursion
-      (goto-char (line-beginning-position))
-      (delete-char 1)
-      (insert-char mark))
-    (put-text-property (mpdired--bol) (line-end-position) 'mark mark)
-    (mpdired--reset-face)))
+    (when (get-text-property (mpdired--bol) 'uri)
+      (save-excursion
+	(goto-char (line-beginning-position))
+	(delete-char 1)
+	(insert-char mark))
+      (put-text-property (mpdired--bol) (line-end-position) 'mark mark)
+      (mpdired--reset-face))))
 
 (defun mpdired--clear-mark ()
   (let ((inhibit-read-only t)
