@@ -221,7 +221,10 @@
 	(when (and in-status-p
 		   (save-excursion (re-search-forward "^file: .*$" eol t 1)))
 	  (setq in-status-p nil)
-	  (push (list state volume repeat random single consume) result)
+	  ;; Save status in main buffer
+	  (with-current-buffer mpdired--main-buffer
+	    (setq mpdired--status
+		  (list state volume repeat random single consume)))
 	  (push songid result)
           (push elapsed result)
 	  (push duration result))
@@ -242,7 +245,10 @@
       (forward-line))
     ;; There was status but no songs
     (when in-status-p
-      (push (list state volume repeat random single consume) result)
+      ;; Save status in main buffer
+      (with-current-buffer mpdired--main-buffer
+	(setq mpdired--status
+	      (list state volume repeat random single consume)))
       (push songid result)
       (push elapsed result)
       (push duration result))
@@ -280,6 +286,8 @@
 (defvar-local mpdired--view nil)
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
+(defvar-local mpdired--status nil
+  "Local copy of the MPD status.  It will updated regularly.")
 
 ;; I tried to use markers but since I often erase the buffer content,
 ;; these markers are reset to 1.
@@ -323,24 +331,25 @@
 	     (put-text-property bol (line-end-position) 'type 'directory)
 	     (put-text-property bol (line-end-position) 'uri dir))))))
 
-(defun mpdired--insert-status (status)
-  (let* ((state (car status))
-	 (volume (nth 1 status))
-	 (repeat (nth 2 status))
-	 (random (nth 3 status))
-	 (single (nth 4 status))
-	 (consume (nth 5 status))
-	 (string (cond ((string= "stop" state) "Stopped")
-		       ((string= "play" state) "Playing")
-		       ((string= "pause" state) "Paused"))))
-    (insert (propertize string 'face 'bold))
-    (when (numberp volume)
-      (insert (format " Volume: %d" volume)))
-    (when repeat (insert " Repeat"))
-    (when random (insert " Random"))
-    (when single (insert " Single"))
-    (when consume (insert " Consume"))
-    (insert "\n")))
+(defun mpdired--insert-status ()
+  (when mpdired--status
+    (let* ((state (car mpdired--status))
+	   (volume (nth 1 mpdired--status))
+	   (repeat (nth 2 mpdired--status))
+	   (random (nth 3 mpdired--status))
+	   (single (nth 4 mpdired--status))
+	   (consume (nth 5 mpdired--status))
+	   (string (cond ((string= "stop" state) "Stopped")
+			 ((string= "play" state) "Playing")
+			 ((string= "pause" state) "Paused"))))
+      (insert (propertize string 'face 'bold))
+      (when (numberp volume)
+	(insert (format " Volume: %d" volume)))
+      (when repeat (insert " Repeat"))
+      (when random (insert " Random"))
+      (when single (insert " Single"))
+      (when consume (insert " Consume"))
+      (insert "\n"))))
 
 (defun mpdired--insert-song (song)
   (let ((id (car song))
@@ -422,19 +431,18 @@
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
 	 (main-buffer (mpdired--main-name peer-host peer-service peer-localp))
 	 (data (mpdired--parse-queue))
-	 (status (car data))
-	 (songid (nth 1 data))
-	 (elapsed (nth 2 data))
-	 (duration (nth 3 data))
-	 (songs (nthcdr 4 data)))
+	 (songid (car data))
+	 (elapsed (cadr data))
+	 (duration (caddr data))
+	 (songs (cdddr data)))
     (with-current-buffer (get-buffer-create main-buffer)
       (let ((inhibit-read-only t))
 	(erase-buffer)
 	;; Insert content
 	(save-excursion
-	  ;; State header
+	  ;; Status header
 	  (goto-char (point-min))
-	  (mpdired--insert-status status)
+	  (mpdired--insert-status)
 	  ;; Songs
 	  (dolist (song songs)
 	    (mpdired--insert-song song)
