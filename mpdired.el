@@ -91,6 +91,7 @@
   "v"      #'mpdired-set-volume-internal
   ;; Status toggles
   "s s"    #'mpdired-stop
+  "s r"    #'mpdired-toggle-random
   ;; Marks
   "m"      #'mpdired-mark-at-point
   "* m"    #'mpdired-mark-at-point
@@ -596,6 +597,16 @@ an optional communication buffer."
     (setq mpdired--last-command 'stop
 	  mpdired--message "Stopping...")
     (process-send-string process "stop\n")))
+
+(defun mpdired-toggle-random ()
+  (interactive)
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'random)
+    (let ((random
+	   (with-current-buffer mpdired--main-buffer
+	     (nth 3 mpdired--status))))
+      (process-send-string process
+			   (format "random %d\n" (if random 0 1))))))
 
 (defun mpdired-next-internal (&optional buffer)
   (interactive)
