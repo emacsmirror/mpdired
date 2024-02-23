@@ -240,7 +240,13 @@
 	(when (re-search-forward "^Id: \\(.*\\)$" eol t 1)
 	  (setq id (string-to-number (match-string 1)))))
       (forward-line))
-    ;; The last one
+    ;; There was status but no songs
+    (when in-status-p
+      (push (list state volume repeat random single consume) result)
+      (push songid result)
+      (push elapsed result)
+      (push duration result))
+    ;; The last song if any
     (when file (push (list id file time) result))
     (reverse result)))
 
