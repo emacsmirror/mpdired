@@ -89,6 +89,8 @@
   "P"      #'mpdired-previous-internal
   "a"      #'mpdired-add
   "v"      #'mpdired-set-volume-internal
+  ;; Status toggles
+  "s s"    #'mpdired-stop
   ;; Marks
   "m"      #'mpdired-mark-at-point
   "* m"    #'mpdired-mark-at-point
@@ -323,11 +325,11 @@
 	 (single (nth 4 status))
 	 (consume (nth 5 status))
 	 (string (cond ((string= "stop" state) "")
-		       ((string= "play" state) "Playing")
-		       ((string= "pause" state) "Paused"))))
+		       ((string= "play" state) "Playing ")
+		       ((string= "pause" state) "Paused "))))
     (insert (propertize string 'face 'bold))
     (when (numberp volume)
-      (insert (format " Volume: %d" volume)))
+      (insert (format "Volume: %d" volume)))
     (when repeat (insert " Repeat"))
     (when random (insert " Random"))
     (when single (insert " Single"))
@@ -573,6 +575,13 @@ an optional communication buffer."
     (setq mpdired--last-command 'pause
 	  mpdired--message "Toggle pause...")
     (process-send-string process "pause\n")))
+
+(defun mpdired-stop ()
+  (interactive)
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'stop
+	  mpdired--message "Stopping...")
+    (process-send-string process "stop\n")))
 
 (defun mpdired-next-internal (&optional buffer)
   (interactive)
