@@ -91,7 +91,10 @@
   "v"      #'mpdired-set-volume-internal
   ;; Status toggles
   "s s"    #'mpdired-stop
+  "s R"    #'mpdired-toggle-repeat
   "s r"    #'mpdired-toggle-random
+  "s S"    #'mpdired-toggle-single
+  "s c"    #'mpdired-toggle-consume
   ;; Marks
   "m"      #'mpdired-mark-at-point
   "* m"    #'mpdired-mark-at-point
@@ -598,6 +601,16 @@ an optional communication buffer."
 	  mpdired--message "Stopping...")
     (process-send-string process "stop\n")))
 
+(defun mpdired-toggle-repeat ()
+  (interactive)
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'repeat)
+    (let ((repeat
+	   (with-current-buffer mpdired--main-buffer
+	     (nth 2 mpdired--status))))
+      (process-send-string process
+			   (format "repeat %d\n" (if repeat 0 1))))))
+
 (defun mpdired-toggle-random ()
   (interactive)
   (mpdired--with-comm-buffer process nil
@@ -607,6 +620,28 @@ an optional communication buffer."
 	     (nth 3 mpdired--status))))
       (process-send-string process
 			   (format "random %d\n" (if random 0 1))))))
+
+;; XXX no oneshot support
+(defun mpdired-toggle-single ()
+  (interactive)
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'single)
+    (let ((single
+	   (with-current-buffer mpdired--main-buffer
+	     (nth 4 mpdired--status))))
+      (process-send-string process
+			   (format "single %d\n" (if single 0 1))))))
+
+;; XXX no oneshot support
+(defun mpdired-toggle-consume ()
+  (interactive)
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'consume)
+    (let ((consume
+	   (with-current-buffer mpdired--main-buffer
+	     (nth 5 mpdired--status))))
+      (process-send-string process
+			   (format "consume %d\n" (if consume 0 1))))))
 
 (defun mpdired-next-internal (&optional buffer)
   (interactive)
