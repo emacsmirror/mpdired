@@ -92,6 +92,7 @@
   "^"      #'mpdired-goto-parent
   "o"      #'mpdired-toggle-view
   "g"      #'mpdired-update
+  "G"      #'mpdired-db-update
   "<SPC>"  #'mpdired-pause-internal
   "N"      #'mpdired-next-internal
   "P"      #'mpdired-previous-internal
@@ -601,6 +602,13 @@ an optional communication buffer."
     (setq mpdired--last-command 'pause
 	  mpdired--message "Toggle pause...")
     (process-send-string process "pause\n")))
+
+(defun mpdired-db-update ()
+  (interactive)
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'stop
+	  mpdired--message "DB Update...")
+    (process-send-string process "update\n")))
 
 (defun mpdired-stop ()
   (interactive)
