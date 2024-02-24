@@ -132,6 +132,10 @@
   '((t :inherit dired-directory))
   "Face used to show a directory.")
 
+(defface mpdired-playlist
+  '((t :inherit dired-symlink))
+  "Face used to show a playlist.")
+
 (defface mpdired-marked
   '((t :inherit dired-marked))
   "Face used to show a marked entry.")
@@ -139,10 +143,6 @@
 (defface mpdired-flagged
   '((t :inherit dired-flagged))
   "Face used to show an entry flagged for deletion.")
-
-(defun mpdired--subdir-p (dir-a dir-b)
-  (let ((pos (string-search dir-a dir-b)))
-    (and pos (zerop pos))))
 
 ;; State variables for the communication buffer
 (defvar-local mpdired--network-params nil)
@@ -152,6 +152,10 @@
   "Link to the main MPDired buffer.")
 (defvar-local mpdired--ascending-p nil)
 (defvar-local mpdired--message nil)
+
+(defun mpdired--subdir-p (dir-a dir-b)
+  (let ((pos (string-search dir-a dir-b)))
+    (and pos (zerop pos))))
 
 (defun mpdired--parse-listall-1 (current accum)
   ;; Recursively rebuild the directory hierarchy from a "listall"
@@ -163,24 +167,26 @@
 		    (setq mpdired--parse-endp
 			  (re-search-forward "^\\(OK\\|ACK.*\\)$"
 					     (line-end-position) t 1))))
-      ;; Look for file or directory line by line (I'm not interested
-      ;; in playlist)
-      (re-search-forward "^\\(file\\|directory\\): \\(.*\\)$"
-			 (line-end-position) t 1)
-      (let ((type (match-string 1))
-	    (new (match-string 2)))
-	(cond ((string= "file" type) (push new accum))
-	      ((string= "directory" type)
-	       ;; This new directory is either a subdir of the current
-	       ;; one or a new directory of the same level of the
-	       ;; current one.  In this last case we need to go one
-	       ;; line backward (because we will go forward later) and
-	       ;; quit the loop.
-	       (cond ((mpdired--subdir-p current new)
-		      (forward-line)
-		      (push (mpdired--parse-listall-1 new (list new)) accum))
-		     (t (forward-line -1)
-			(throw 'exit t))))))
+      ;; Look for file, playlist or directory line by line.
+      (when
+	  (re-search-forward "^\\(file\\|playlist\\|directory\\): \\(.*\\)$"
+			     (line-end-position) t 1)
+	(let ((type (match-string 1))
+	      (name (match-string 2)))
+	  (cond ((or (string= "file" type)
+		     (string= "playlist" type))
+		 (push (cons (intern type) name) accum))
+		((string= "directory" type)
+		 ;; This new directory is either a subdir of the current
+		 ;; one or a new directory of the same level of the
+		 ;; current one.  In this last case we need to go one
+		 ;; line backward (because we will go forward later) and
+		 ;; quit the loop.
+		 (cond ((mpdired--subdir-p current name)
+			(forward-line)
+			(push (mpdired--parse-listall-1 name (list name)) accum))
+		       (t (forward-line -1)
+			  (throw 'exit t)))))))
       (forward-line)))
   (reverse accum))
 
@@ -336,15 +342,23 @@
   "Insert ENTRY in MPDired browser view."
   (insert "  ")
   (let ((bol (mpdired--bol)))
-    (cond ((stringp entry)
-	   (insert (mpdired--short-name entry))
-	   (put-text-property bol (line-end-position) 'type 'file)
-	   (put-text-property bol (line-end-position) 'uri entry))
-	  ((consp entry)
-	   (let ((dir (car entry)))
-	     (insert (propertize (mpdired--short-name dir) 'face 'mpdired-directory))
-	     (put-text-property bol (line-end-position) 'type 'directory)
-	     (put-text-property bol (line-end-position) 'uri dir))))
+    (when (consp entry)
+      (let ((type (car entry)))
+	(cond ((stringp type)  ;; this is a directory
+	       (insert (propertize (mpdired--short-name type) 'face 'mpdired-directory))
+	       (put-text-property bol (line-end-position) 'type 'directory)
+	       (put-text-property bol (line-end-position) 'uri type))
+	      ((eq type 'file)
+	       (let ((file (cdr entry)))
+		 (insert (mpdired--short-name file))
+		 (put-text-property bol (line-end-position) 'type 'file)
+		 (put-text-property bol (line-end-position) 'uri file)))
+	      ((eq type 'playlist)
+	       (let ((playlist (cdr entry)))
+		 (insert (propertize (mpdired--short-name playlist)
+				     'face 'mpdired-playlist))
+		 (put-text-property bol (line-end-position) 'type 'playlist)
+		 (put-text-property bol (line-end-position) 'uri playlist))))))
     (insert "\n")))
 
 (defun mpdired--insert-status ()
@@ -559,7 +573,11 @@ an optional communication buffer."
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'listall
 	  mpdired--ascending-p ascending-p)
-    (process-send-string process (format "listall \"%s\"\n" path))))
+    (process-send-string process "command_list_begin\n")
+    (when (string= "" path)
+      (process-send-string process "listplaylists\n"))
+    (process-send-string process (format "listall \"%s\"\n" path))
+    (process-send-string process "command_list_end\n")))
 
 (defun mpdired-queue-internal (&optional buffer)
   (mpdired--with-comm-buffer process buffer
