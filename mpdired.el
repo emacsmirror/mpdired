@@ -344,7 +344,8 @@
 	   (let ((dir (car entry)))
 	     (insert (propertize (mpdired--short-name dir) 'face 'mpdired-directory))
 	     (put-text-property bol (line-end-position) 'type 'directory)
-	     (put-text-property bol (line-end-position) 'uri dir))))))
+	     (put-text-property bol (line-end-position) 'uri dir))))
+    (insert "\n")))
 
 (defun mpdired--insert-status ()
   "Insert current status in MPDired queue view."
@@ -376,7 +377,8 @@
 	  (eol (line-end-position)))
       (put-text-property bol eol 'id id)
       (put-text-property bol eol 'type 'song)
-      (put-text-property bol eol 'uri uri))))
+      (put-text-property bol eol 'uri uri))
+    (insert "\n")))
 
 (defun mpdired--goto-id (songid)
   (let ((max (point-max)))
@@ -409,9 +411,7 @@
 	;; Insert the content
 	(save-excursion
 	  (if top (insert (propertize top 'face 'dired-header) ":\n"))
-	  (dolist (e data)
-	    (mpdired--insert-entry e)
-	    (insert "\n")))
+	  (dolist (e data) (mpdired--insert-entry e)))
 	;; Set mode and memorize stuff
 	(mpdired-mode)
 	(if ascending-p (setq from mpdired--directory))
@@ -458,9 +458,7 @@
 	  (goto-char (point-min))
 	  (mpdired--insert-status)
 	  ;; Songs
-	  (dolist (song songs)
-	    (mpdired--insert-song song)
-	    (insert "\n")))
+	  (dolist (song songs) (mpdired--insert-song song)))
 	;; Go to the current song and display elasped time with a
 	;; different face on its URI.
 	(save-excursion
