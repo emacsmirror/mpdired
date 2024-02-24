@@ -256,7 +256,7 @@
 	(when (re-search-forward "^Id: \\(.*\\)$" eol t 1)
 	  (setq id (string-to-number (match-string 1)))))
       (forward-line))
-    ;; There was status but no songs
+    ;; There was only status but no songs
     (when in-status-p
       ;; Save status in main buffer
       (with-current-buffer mpdired--main-buffer
@@ -296,14 +296,15 @@
 ;; State variables for the main buffer
 (defvar-local mpdired--directory nil
   "Current directory of the browser view.")
-(defvar-local mpdired--view nil)
+(defvar-local mpdired--view nil
+  "Current view of the MPDired buffer.")
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
 (defvar-local mpdired--status nil
   "Local copy of the MPD status.  It will updated regularly.")
 
-;; I tried to use markers but since I often erase the buffer content,
-;; these markers are reset to 1.
+;; I tried to use markers but since I often erase the buffer's
+;; content, these markers are reset to 1.
 (defvar-local mpdired--browser-point nil
   "Saved point position in the browser view.")
 (defvar-local mpdired--songid-point nil
@@ -332,6 +333,7 @@
 	   (put-text-property bol eol 'face 'mpdired-song)))))
 
 (defun mpdired--insert-entry (entry)
+  "Insert ENTRY in MPDired browser view."
   (insert "  ")
   (let ((bol (mpdired--bol)))
     (cond ((stringp entry)
@@ -345,6 +347,7 @@
 	     (put-text-property bol (line-end-position) 'uri dir))))))
 
 (defun mpdired--insert-status ()
+  "Insert current status in MPDired queue view."
   (when mpdired--status
     (let* ((state (car mpdired--status))
 	   (volume (nth 1 mpdired--status))
@@ -365,6 +368,7 @@
       (insert "\n"))))
 
 (defun mpdired--insert-song (song)
+  "Insert SONG in MPDired queue view."
   (let ((id (car song))
 	(uri (cadr song)))
     (insert "  " (propertize uri 'face 'mpdired-song))
@@ -373,10 +377,6 @@
       (put-text-property bol eol 'id id)
       (put-text-property bol eol 'type 'song)
       (put-text-property bol eol 'uri uri))))
-
-(defun mpdired--reset-point (point)
-  (goto-char point)
-  (goto-char (mpdired--bol)))
 
 (defun mpdired--goto-id (songid)
   (let ((max (point-max)))
@@ -430,7 +430,8 @@
 	       (goto-char (mpdired--bol))
 	       (setq mpdired--browser-point (point)))
 	      (mpdired--browser-point
-	       (mpdired--reset-point mpdired--browser-point))
+	       (goto-char mpdired--browser-point)
+	       (goto-char (mpdired--bol)))
 	      (t (goto-char (point-min))
 		 (if top
 		     (mpdired-next-line)
@@ -460,8 +461,8 @@
 	  (dolist (song songs)
 	    (mpdired--insert-song song)
 	    (insert "\n")))
-	;; Go to the current song and display elasped time with a face
-	;; on its URI.
+	;; Go to the current song and display elasped time with a
+	;; different face on its URI.
 	(save-excursion
 	  (when songid
 	    (let ((max (point-max)))
@@ -500,6 +501,7 @@
 		((or (eq mpdired--last-command 'queue)
 		     (eq mpdired--last-command 'deleteid))
 		 (mpdired--present-queue proc)))
+	  ;; Display and reset message.
 	  (when mpdired--message
 	    (message (format "%s done." mpdired--message))
 	    (setq mpdired--message nil)))))))
@@ -509,11 +511,13 @@
     (message "Process: %s had the event '%s'" process event)))
 
 (defun mpdired--local-p (host)
+  "Is HOST a local socket?"
   ;; Hack: if the `expand-file-name' of host leads to an existing
   ;; file, that should be our Unix socket.
   (file-exists-p (expand-file-name host)))
 
 (defun mpdired--maybe-reconnect (comm-buffer)
+  "If COMM-BUFFER is disconnected, reconnect it to its server."
   (let ((process (get-buffer-process comm-buffer)))
     (unless (and process (eq (process-status process) 'open))
       ;; Reconnect from saved parameters.
@@ -597,6 +601,7 @@ an optional communication buffer."
     (process-send-string process "command_list_end\n")))
 
 (defun mpdired-pause-internal (&optional buffer)
+  "Toggle pause."
   (interactive)
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'pause
@@ -604,6 +609,7 @@ an optional communication buffer."
     (process-send-string process "pause\n")))
 
 (defun mpdired-db-update ()
+  "Issue a database update."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'stop
@@ -611,6 +617,7 @@ an optional communication buffer."
     (process-send-string process "update\n")))
 
 (defun mpdired-stop ()
+  "Stops playing."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'stop
@@ -618,6 +625,7 @@ an optional communication buffer."
     (process-send-string process "stop\n")))
 
 (defun mpdired-toggle-repeat ()
+  "Toggle repeat mode."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'repeat)
@@ -628,6 +636,7 @@ an optional communication buffer."
 			   (format "repeat %d\n" (if repeat 0 1))))))
 
 (defun mpdired-toggle-random ()
+  "Toggle random mode."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'random)
@@ -639,6 +648,7 @@ an optional communication buffer."
 
 ;; XXX no oneshot support
 (defun mpdired-toggle-single ()
+  "Toggle single mode."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'single)
@@ -650,6 +660,7 @@ an optional communication buffer."
 
 ;; XXX no oneshot support
 (defun mpdired-toggle-consume ()
+  "Toggle consume mode."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'consume)
@@ -660,18 +671,21 @@ an optional communication buffer."
 			   (format "consume %d\n" (if consume 0 1))))))
 
 (defun mpdired-next-internal (&optional buffer)
+  "Start playing the next song from the queue."
   (interactive)
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'next)
     (process-send-string process "next\n")))
 
 (defun mpdired-previous-internal (&optional buffer)
+  "Start playing the previous song from the queue."
   (interactive)
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'previous)
     (process-send-string process "previous\n")))
 
 (defun mpdired-set-volume-internal (volume &optional buffer)
+  "Change MPD volume.  VOLUME is a number between 0 and 100."
   (interactive "nVolume: ")
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'setvol)
@@ -691,7 +705,7 @@ an optional communication buffer."
   (goto-char (mpdired--bol)))
 
 (defun mpdired-next-line ()
-  "Next line with saving."
+  "Go to next line and save position."
   (interactive)
   (mpdired--next-line)
   (mpdired--save-point))
@@ -701,7 +715,7 @@ an optional communication buffer."
   (goto-char (mpdired--bol)))
 
 (defun mpdired-previous-line ()
-  "Previous line with saving."
+  "Go to previous line and save position."
   (interactive)
   (mpdired--previous-line)
   (mpdired--save-point))
@@ -719,11 +733,14 @@ an optional communication buffer."
     (when id (mpdired-playid-internal id))))
 
 (defun mpdired-enter ()
+  "In the browser view, browse the entry at point.
+In the queue view, start playing the song at point."
   (interactive)
   (cond ((eq mpdired--view 'browser)
 	 (setq mpdired--browser-point nil)
 	 (mpdired-listall-at-point))
-	(t (mpdired-playid-at-point))))
+	((eq mpdired--view 'queue)
+	 (mpdired-playid-at-point))))
 
 (defun mpdired--unsplit (list separator)
   (let (res)
@@ -741,6 +758,7 @@ an optional communication buffer."
 	(mpdired--unsplit (butlast split) "/")))))
 
 (defun mpdired-goto-parent ()
+  "Browse the parent directory of the current one."
   (interactive)
   (let ((parent (mpdired--parent)))
     (cond (parent
@@ -749,6 +767,7 @@ an optional communication buffer."
 	  (t (message "You are at the toplevel.")))))
 
 (defun mpdired-toggle-view ()
+  "Toggle between the browser and the queue view."
   (interactive)
   (cond ((eq mpdired--view 'browser)
 	 (mpdired-queue-internal))
@@ -784,16 +803,19 @@ an optional communication buffer."
 	(insert-char ? )))))
 
 (defun mpdired-mark-at-point ()
+  "Mark entry at point."
   (interactive)
   (mpdired--mark ?*)
   (mpdired-next-line))
 
 (defun mpdired-flag-at-point ()
+  "Flag entry at point."
   (interactive)
   (mpdired--mark ?d)
   (mpdired-next-line))
 
 (defun mpdired-toggle-marks ()
+  "Toggle marks."
   (interactive)
   (save-excursion
     (goto-char (point-min))
@@ -806,6 +828,7 @@ an optional communication buffer."
 	(forward-line)))))
 
 (defun mpdired-change-marks (&optional old new)
+  "Change mark from OLD to NEW.  It asks the user for OLD and NEW."
   (interactive
    (let* ((cursor-in-echo-area t)
 	  (old (progn (message "Change (old mark): ") (read-char)))
@@ -823,16 +846,19 @@ an optional communication buffer."
 	  (forward-line))))))
 
 (defun mpdired-unmark-at-point ()
+  "Remove any mark at point."
   (interactive)
   (mpdired--clear-mark)
   (mpdired-next-line))
 
 (defun mpdired-previous-unmark ()
+  "Remove any mark on the previous line and move to it."
   (interactive)
   (mpdired-previous-line)
   (mpdired--clear-mark))
 
 (defun mpdired-unmark-all-marks ()
+  "Remove all marks in the current buffer."
   (interactive)
   (let ((inhibit-read-only t))
     (save-excursion
@@ -859,6 +885,7 @@ an optional communication buffer."
       (reverse result))))
 
 (defun mpdired-mark-files-regexp (regexp &optional mark)
+  "Mark entries which matches a user provided REGEXP."
   (interactive (list (read-regexp "Mark (regexp): ")))
   (save-excursion
     (goto-char (point-min))
@@ -870,6 +897,7 @@ an optional communication buffer."
 	(forward-line)))))
 
 (defun mpdired-flag-files-regexp (regexp)
+  "Flag entries which matches a user provided REGEXP."
   (interactive (list (read-regexp "Flag for deletion (regexp): ")))
   (mpdired-mark-files-regexp regexp ?d))
 
@@ -898,6 +926,7 @@ an optional communication buffer."
 		   (car uris) (cadr uris) (- n 2))))))
 
 (defun mpdired-add ()
+  "Recursively add the entry at point at the end of the queue."
   (interactive)
   (let* ((marked (mpdired--collect-marked ?*))
 	 (uris (mapcar 'cdr marked)))
@@ -918,6 +947,7 @@ an optional communication buffer."
       (mpdired-deleteid-internal id))))
 
 (defun mpdired-delete ()
+  "Remove song at point from the queue."
   (interactive)
   (cond ((eq mpdired--view 'queue)
 	 (mpdired-deleteid-at-point))))
@@ -932,6 +962,7 @@ an optional communication buffer."
 	(get-text-property (mpdired--bol) 'id)))))
 
 (defun mpdired-flagged-delete ()
+  "Remove flagged songs from the queue."
   (interactive)
   (when (eq mpdired--view 'queue)
     (let* ((flagged (mpdired--collect-marked ?d))
@@ -941,6 +972,7 @@ an optional communication buffer."
 	(mpdired-deleteid-internal ids)))))
 
 (defun mpdired-update ()
+  "Update the buffer content.  It works both for browser and queue view."
   (interactive)
   (cond ((eq mpdired--view 'queue)
 	 (mpdired-queue-internal))
