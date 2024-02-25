@@ -426,7 +426,7 @@
 	(erase-buffer)
 	;; Insert the content
 	(save-excursion
-	  (cond (top
+	  (cond ((stringp top)
 		 (insert (propertize top 'face 'dired-header) ":\n"))
 		(mpdired--playlist
 		 (insert (propertize mpdired--playlist 'face 'dired-header) ":\n")))
@@ -608,14 +608,19 @@ an optional communication buffer."
     (setq mpdired--last-command 'playid)
     (process-send-string process (format "playid %d\n" id))))
 
-(defun mpdired-add-internal (uri)
+(defun mpdired-add-internal (typed-uris)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'add)
     (process-send-string process "command_list_begin\n")
-    (if (listp uri)
-	(dolist (u uri)
-	  (process-send-string process (format "add \"%s\"\n" u)))
-      (process-send-string process (format "add \"%s\"\n" uri)))
+    (if (listp typed-uris)
+	(dolist (typed-uri typed-uris)
+	  (let ((type (car typed-uri))
+		(uri (cdr typed-uri)))
+	    ;; "add" is called "load" for playlists
+	    (if (eq type 'playlist)
+		(process-send-string process (format "load \"%s\"\n" uri))
+	      (process-send-string process (format "add \"%s\"\n" uri)))))
+      (process-send-string process (format "add \"%s\"\n" typed-uris)))
     (process-send-string process "command_list_end\n")))
 
 (defun mpdired-deleteid-internal (id)
@@ -915,9 +920,10 @@ In the queue view, start playing the song at point."
 	(let* ((bol (mpdired--bol))
 	       (mark (get-text-property bol 'mark))
 	       (id (get-text-property bol 'id))
+	       (type (get-text-property bol 'type))
 	       (uri (get-text-property bol 'uri)))
 	  (when (and mark (char-equal mark want))
-	    (push (cons id uri) result)))
+	    (push (cons id (cons type uri)) result)))
 	(forward-line))
       (reverse result))))
 
@@ -953,8 +959,9 @@ In the queue view, start playing the song at point."
       (mpdired-add-internal uri)
       (mpdired-next-line))))
 
-(defun mpdired--build-add-message (uris)
-  (let ((n (length uris)))
+(defun mpdired--build-add-message (typed-uris)
+  (let* ((uris (mapcar 'cdr typed-uris))
+	 (n (length uris)))
     (cond ((= n 1) (format "Adding %s..." (car uris)))
 	  ((= n 2)
 	   (format "Adding %s and %s..." (car uris) (cadr uris)))
@@ -966,10 +973,10 @@ In the queue view, start playing the song at point."
   "Recursively add the entry at point at the end of the queue."
   (interactive)
   (let* ((marked (mpdired--collect-marked ?*))
-	 (uris (mapcar 'cdr marked)))
-    (cond (uris
-	   (mpdired--append-message (mpdired--build-add-message uris))
-	   (mpdired-add-internal uris))
+	 (typed-uris (mapcar 'cdr marked)))
+    (cond (typed-uris
+	   (mpdired--append-message (mpdired--build-add-message typed-uris))
+	   (mpdired-add-internal typed-uris))
 	  (t (mpdired-add-at-point)))))
 
 (defun mpdired-deleteid-at-point ()
