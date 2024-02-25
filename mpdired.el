@@ -140,8 +140,6 @@
   '((t :inherit dired-special))
   "Face used to show the progress of a song.")
 
-
-
 (defface mpdired-marked
   '((t :inherit dired-marked))
   "Face used to show a marked entry.")
@@ -157,6 +155,7 @@
 (defvar-local mpdired--main-buffer nil
   "Link to the main MPDired buffer.")
 (defvar-local mpdired--ascending-p nil)
+(defvar-local mpdired--playlist nil)
 (defvar-local mpdired--message nil)
 
 (defun mpdired--subdir-p (dir-a dir-b)
@@ -309,9 +308,7 @@
 (defvar-local mpdired--view nil
   "Current view of the MPDired buffer.")
 (defvar-local mpdired--directory nil
-  "Current directory of the browser view.")
-(defvar-local mpdired--playlist nil
-  "Current browsed playlist.")
+  "Current directory (or MPD playlist) of the browser view.")
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
 (defvar-local mpdired--status nil
@@ -423,21 +420,22 @@
 	 ascending-p from)
     ;; Retrieve infos from this process buffer
     (with-current-buffer (process-buffer proc)
-      (setq ascending-p mpdired--ascending-p))
+      (setq ascending-p mpdired--ascending-p
+	    playlist mpdired--playlist))
     (with-current-buffer (get-buffer-create main-buffer)
       (let* ((inhibit-read-only t)
 	     ;; `content' is always of the form ("" rest...) so if there
 	     ;; is only one "rest" use it as content.
 	     (content (if (cddr content) content (cadr content)))
-	     (top (unless (string= "" (car content)) (car content)))
+	     (top (if playlist
+		      playlist
+		    (unless (string= "" (car content)) (car content))))
 	     (data (cdr content)))
 	(erase-buffer)
 	;; Insert the content
 	(save-excursion
-	  (cond ((stringp top)
-		 (insert (propertize top 'face 'mpdired-currdir) ":\n"))
-		(mpdired--playlist
-		 (insert (propertize mpdired--playlist 'face 'mpdired-currdir) ":\n")))
+	  (when (stringp top)
+	    (insert (propertize top 'face 'mpdired-currdir) ":\n"))
 	  (dolist (e data) (mpdired--insert-entry e)))
 	;; Set mode and memorize stuff
 	(mpdired-mode)
@@ -597,9 +595,8 @@ an optional communication buffer."
 (defun mpdired-listplaylist-internal (path &optional ascending-p)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'listplaylist
-	  mpdired--ascending-p ascending-p)
-    (with-current-buffer mpdired--main-buffer
-      (setq mpdired--playlist path))
+	  mpdired--ascending-p ascending-p
+	  mpdired--playlist path)
     (process-send-string process (format "listplaylist \"%s\"\n" path))))
 
 (defun mpdired-queue-internal (&optional buffer)
@@ -798,21 +795,20 @@ In the queue view, start playing the song at point."
     (apply 'concat (reverse res))))
 
 (defun mpdired--parent ()
-  (cond ((stringp mpdired--directory)
-	 (let ((split (split-string mpdired--directory "/")))
+  (when (stringp mpdired--directory)
+    (let ((split (split-string mpdired--directory "/")))
 	   (if (= 1 (length split))
 	       ""
-	     (mpdired--unsplit (butlast split) "/"))))
-	;; The parent of a playlist is toplevel
-	(mpdired--playlist "")))
+	     (mpdired--unsplit (butlast split) "/")))))
 
 (defun mpdired-goto-parent ()
   "Browse the parent directory of the current one."
   (interactive)
   (let ((parent (mpdired--parent)))
     (cond (parent
-	   (setq mpdired--browser-point nil
-		 mpdired--playlist nil)
+	   (setq mpdired--browser-point nil)
+	   (with-current-buffer mpdired--comm-buffer
+	     (setq mpdired--playlist nil))
 	   (mpdired-listall-internal parent t))
 	  (t (message "You are at the toplevel.")))))
 
