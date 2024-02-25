@@ -300,10 +300,12 @@
   (format "*MPDired (%s)*" (mpdired--hostname host service localp)))
 
 ;; State variables for the main buffer
-(defvar-local mpdired--directory nil
-  "Current directory of the browser view.")
 (defvar-local mpdired--view nil
   "Current view of the MPDired buffer.")
+(defvar-local mpdired--directory nil
+  "Current directory of the browser view.")
+(defvar-local mpdired--playlist nil
+  "Current browsed playlist.")
 (defvar-local mpdired--comm-buffer nil
   "Communication buffer associated to this MPDired buffer.")
 (defvar-local mpdired--status nil
@@ -402,7 +404,7 @@
 		      (and id (/= songid id)))))
       (mpdired--next-line))))
 
-(defun mpdired--present-listall (proc)
+(defun mpdired--present-list (proc)
   ;; Called by filter of the communication buffer.
   (let* ((peer-info (process-contact proc t))
 	 (peer-host (plist-get peer-info :host))
@@ -424,7 +426,10 @@
 	(erase-buffer)
 	;; Insert the content
 	(save-excursion
-	  (if top (insert (propertize top 'face 'dired-header) ":\n"))
+	  (cond (top
+		 (insert (propertize top 'face 'dired-header) ":\n"))
+		(mpdired--playlist
+		 (insert (propertize mpdired--playlist 'face 'dired-header) ":\n")))
 	  (dolist (e data) (mpdired--insert-entry e)))
 	;; Set mode and memorize stuff
 	(mpdired-mode)
@@ -508,8 +513,9 @@
 	(if moving (goto-char (process-mark proc)))
 	;; The server has done its work.
 	(when (re-search-backward "^\\(OK\\|ACK.*\\)$" nil t)
-	  (cond ((eq mpdired--last-command 'listall)
-		 (mpdired--present-listall proc))
+	  (cond ((or (eq mpdired--last-command 'listall)
+		     (eq mpdired--last-command 'listplaylist))
+		 (mpdired--present-list proc))
 		((or (eq mpdired--last-command 'queue)
 		     (eq mpdired--last-command 'deleteid))
 		 (mpdired--present-queue proc)))
@@ -574,10 +580,19 @@ an optional communication buffer."
     (setq mpdired--last-command 'listall
 	  mpdired--ascending-p ascending-p)
     (process-send-string process "command_list_begin\n")
+    ;; At toplevel also lists MPD's playlists.
     (when (string= "" path)
       (process-send-string process "listplaylists\n"))
     (process-send-string process (format "listall \"%s\"\n" path))
     (process-send-string process "command_list_end\n")))
+
+(defun mpdired-listplaylist-internal (path &optional ascending-p)
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'listplaylist
+	  mpdired--ascending-p ascending-p)
+    (with-current-buffer mpdired--main-buffer
+      (setq mpdired--playlist path))
+    (process-send-string process (format "listplaylist \"%s\"\n" path))))
 
 (defun mpdired-queue-internal (&optional buffer)
   (mpdired--with-comm-buffer process buffer
@@ -740,9 +755,12 @@ an optional communication buffer."
   (let* ((bol (mpdired--bol))
 	 (type (get-text-property bol 'type))
 	 (uri (get-text-property bol 'uri)))
-    (if (eq type 'directory)
-	(mpdired-listall-internal uri)
-      (message "Cannot browse a file."))))
+    (cond ((eq type 'directory)
+	   (mpdired-listall-internal uri))
+	  ((eq type 'playlist)
+	   (mpdired-listplaylist-internal uri))
+	  ((eq type 'file)
+	   (message "Cannot browse a file.")))))
 
 (defun mpdired-playid-at-point ()
   (let ((id (get-text-property (mpdired--bol) 'id)))
@@ -767,18 +785,21 @@ In the queue view, start playing the song at point."
     (apply 'concat (reverse res))))
 
 (defun mpdired--parent ()
-  (when (stringp mpdired--directory)
-    (let ((split (split-string mpdired--directory "/")))
-      (if (= 1 (length split))
-	  ""
-	(mpdired--unsplit (butlast split) "/")))))
+  (cond ((stringp mpdired--directory)
+	 (let ((split (split-string mpdired--directory "/")))
+	   (if (= 1 (length split))
+	       ""
+	     (mpdired--unsplit (butlast split) "/"))))
+	;; The parent of a playlist is toplevel
+	(mpdired--playlist "")))
 
 (defun mpdired-goto-parent ()
   "Browse the parent directory of the current one."
   (interactive)
   (let ((parent (mpdired--parent)))
     (cond (parent
-	   (setq mpdired--browser-point nil)
+	   (setq mpdired--browser-point nil
+		 mpdired--playlist nil)
 	   (mpdired-listall-internal parent t))
 	  (t (message "You are at the toplevel.")))))
 
