@@ -120,13 +120,9 @@
   "x"      #'mpdired-flagged-delete
   "D"      #'mpdired-delete)
 
-(defface mpdired-song
-  '((t :inherit dired-ignored))
-  "Face used to show a song.")
-
-(defface mpdired-progress
-  '((t :inherit dired-special))
-  "Face used to show the progress of a song.")
+(defface mpdired-currdir
+  '((t :inherit dired-header))
+  "Face used to show current directory.")
 
 (defface mpdired-directory
   '((t :inherit dired-directory))
@@ -135,6 +131,16 @@
 (defface mpdired-playlist
   '((t :inherit dired-symlink))
   "Face used to show a playlist.")
+
+(defface mpdired-song
+  '((t :inherit dired-ignored))
+  "Face used to show a song.")
+
+(defface mpdired-progress
+  '((t :inherit dired-special))
+  "Face used to show the progress of a song.")
+
+
 
 (defface mpdired-marked
   '((t :inherit dired-marked))
@@ -337,6 +343,8 @@
 	   (put-text-property bol eol 'face 'mpdired-marked))
 	  ((eq type 'directory)
 	   (put-text-property bol eol 'face 'mpdired-directory))
+	  ((eq type 'playlist)
+	   (put-text-property bol eol 'face 'mpdired-playlist))
 	  ((eq type 'song)
 	   (put-text-property bol eol 'face 'mpdired-song)))))
 
@@ -427,9 +435,9 @@
 	;; Insert the content
 	(save-excursion
 	  (cond ((stringp top)
-		 (insert (propertize top 'face 'dired-header) ":\n"))
+		 (insert (propertize top 'face 'mpdired-currdir) ":\n"))
 		(mpdired--playlist
-		 (insert (propertize mpdired--playlist 'face 'dired-header) ":\n")))
+		 (insert (propertize mpdired--playlist 'face 'mpdired-currdir) ":\n")))
 	  (dolist (e data) (mpdired--insert-entry e)))
 	;; Set mode and memorize stuff
 	(mpdired-mode)
