@@ -523,17 +523,19 @@
 	  (set-marker (process-mark proc) (point)))
 	(if moving (goto-char (process-mark proc)))
 	;; The server has done its work.
-	(when (re-search-backward "^\\(OK\\|ACK.*\\)$" nil t)
-	  (cond ((or (eq mpdired--last-command 'listall)
-		     (eq mpdired--last-command 'listplaylist))
-		 (mpdired--present-list proc))
-		((or (eq mpdired--last-command 'queue)
-		     (eq mpdired--last-command 'deleteid))
-		 (mpdired--present-queue proc)))
-	  ;; Display and reset message.
-	  (when mpdired--message
-	    (message (format "%s done." mpdired--message))
-	    (setq mpdired--message nil)))))))
+	(cond ((re-search-backward "^ACK \\(.*\\)$" nil t)
+	       (message (match-string 1)))
+	      ((re-search-backward "^OK$" nil t)
+	       (cond ((or (eq mpdired--last-command 'listall)
+			  (eq mpdired--last-command 'listplaylist))
+		      (mpdired--present-list proc))
+		     ((or (eq mpdired--last-command 'queue)
+			  (eq mpdired--last-command 'deleteid))
+		      (mpdired--present-queue proc)))
+	       ;; Display and reset message.
+	       (when mpdired--message
+		 (message (format "%s done." mpdired--message))
+		 (setq mpdired--message nil))))))))
 
 (defun mpdired--sentinel (process event)
   (unless (string-search "connection broken" event)
