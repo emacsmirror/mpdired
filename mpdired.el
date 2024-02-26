@@ -61,6 +61,8 @@
 
 ;;; Bugs & Funs:
 ;;
+;; - MPDired does not handle MPD server with password.
+;;
 ;; - Marks are really temporary.  As I rebuild the views often and the
 ;;   mark is only stored in text property they will be wipe out
 ;;   regularly.
