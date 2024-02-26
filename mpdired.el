@@ -106,6 +106,9 @@
   "s r"    #'mpdired-toggle-random
   "s S"    #'mpdired-toggle-single
   "s c"    #'mpdired-toggle-consume
+  ;; Playlist commands
+  "l c"    #'mpdired-playlist-create
+  "l a"    #'mpdired-playlist-append
   ;; Marks
   "m"      #'mpdired-mark-at-point
   "* m"    #'mpdired-mark-at-point
@@ -734,6 +737,18 @@ an optional communication buffer."
     (setq mpdired--last-command 'setvol)
     (process-send-string process
 			 (format "setvol %d\n" (min 100 (max 0 volume))))))
+
+(defun mpdired-playlist-create (name)
+  (interactive "MPlaylist name: ")
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'playlist-create)
+    (process-send-string process (format "save \"%s\"\n" name))))
+
+(defun mpdired-playlist-append (name)
+  (interactive "MPlaylist name: ")
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'playlist-append)
+    (process-send-string process (format "save \"%s\" append\n" name))))
 
 (defun mpdired--save-point ()
   (cond ((eq mpdired--view 'queue)
