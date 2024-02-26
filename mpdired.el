@@ -1049,7 +1049,7 @@ In the queue view, start playing the song at point."
     (cons comm-name main-name)))
 
 
-;; General commands (i.e. usable outside of the MPDired buffer).
+;; Global commands (i.e. usable outside of the MPDired buffer).
 (defun mpdired-pause ()
   "Toggle MPDired pause."
   (interactive)
