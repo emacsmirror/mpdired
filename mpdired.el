@@ -820,10 +820,17 @@ In the queue view, start playing the song at point."
 	((eq mpdired--view 'queue)
 	 (cond (mpdired--directory
 		(mpdired-listall-internal mpdired--directory)
-		;; Empty buffer? our current directory was probably
-		;; bogus.
-		(when (= 0 (buffer-size))
-		  (sit-for .2)
+		;; XXX this is a bit hacky
+		(sit-for .1)
+		;; If the buffer has only one header line then we may
+		;; have been visiting a playlist.
+		(when (= 1 (count-lines (point-min) (point-max)))
+		  (mpdired-listplaylist-internal mpdired--directory))
+		(sit-for .1)
+		;; If the buffer is *still* a one liner then we may
+		;; have a bogus `mpdired--directory': go back to
+		;; toplevel.
+		(when (= 1 (count-lines (point-min) (point-max)))
 		  (mpdired-listall-internal "")))
 	       (t (mpdired-listall-internal ""))))))
 
