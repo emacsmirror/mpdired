@@ -973,11 +973,11 @@ In the queue view, start playing the song at point."
 (defun mpdired--build-add-message (typed-uris)
   (let* ((uris (mapcar 'cdr typed-uris))
 	 (n (length uris)))
-    (cond ((= n 1) (format "Adding %s..." (car uris)))
+    (cond ((= n 1) (format "Adding \"%s\"..." (car uris)))
 	  ((= n 2)
-	   (format "Adding %s and %s..." (car uris) (cadr uris)))
+	   (format "Adding \"%s\" and \"%s\"..." (car uris) (cadr uris)))
 	  ((> n 2)
-	   (format "Adding %s, %s and %d others..."
+	   (format "Adding \"%s\", \"%s\" and %d others..."
 		   (car uris) (cadr uris) (- n 2))))))
 
 (defun mpdired-add ()
