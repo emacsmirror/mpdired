@@ -318,6 +318,7 @@
   "Communication buffer associated to this MPDired buffer.")
 (defvar-local mpdired--status nil
   "Local copy of the MPD status.  It will updated regularly.")
+(defvar-local mpdired--error nil)
 
 ;; I tried to use markers but since I often erase the buffer's
 ;; content, these markers are reset to 1.
@@ -524,7 +525,15 @@
 	(if moving (goto-char (process-mark proc)))
 	;; The server has replied.
 	(cond ((re-search-backward "^ACK \\(.*\\)$" nil t)
-	       (message (match-string 1)))
+	       (cond ((string= (match-string 1)
+			       "[50@0] {listall} No such directory")
+		      (with-current-buffer mpdired--main-buffer
+			(setq mpdired--error 'no-directory)))
+		     ((string= (match-string 1)
+			       "[50@0] {listplaylist} No such playlist")
+		      (with-current-buffer mpdired--main-buffer
+			(setq mpdired--error 'no-playlist)))
+		     (t (message (match-string 1)))))
 	      ((re-search-backward "^OK$" nil t)
 	       ;; Present results in the main buffer
 	       (cond ((or (eq mpdired--last-command 'listall)
@@ -839,19 +848,21 @@ In the queue view, start playing the song at point."
 	 (mpdired-queue-internal))
 	((eq mpdired--view 'queue)
 	 (cond (mpdired--directory
-		(mpdired-listall-internal mpdired--directory)
-		;; XXX this is a bit hacky
-		(sit-for .1)
-		;; If the buffer has only one header line then we may
-		;; have been visiting a playlist.
-		(when (= 1 (count-lines (point-min) (point-max)))
-		  (mpdired-listplaylist-internal mpdired--directory))
-		(sit-for .1)
-		;; If the buffer is *still* a one liner then we may
-		;; have a bogus `mpdired--directory': go back to
-		;; toplevel.
-		(when (= 1 (count-lines (point-min) (point-max)))
-		  (mpdired-listall-internal "")))
+		(let ((proc (get-buffer-process mpdired--comm-buffer)))
+		  (mpdired-listall-internal mpdired--directory)
+		  ;; XXX this is a bit hacky
+		  (while (accept-process-output proc 0 50))
+		  ;; If we get an error "No such directory" then we may
+		  ;; have been visiting a playlist.
+		  (when (eq mpdired--error 'no-directory)
+		    (setq mpdired--error nil)
+		    (mpdired-listplaylist-internal mpdired--directory))
+		  (while (accept-process-output proc 0 50))
+		  ;; If get an error "No such playlist" then we may have
+		  ;; a bogus `mpdired--directory': go back to toplevel.
+		  (when (eq mpdired--error 'no-playlist)
+		    (setq mpdired--error nil)
+		    (mpdired-listall-internal ""))))
 	       (t (mpdired-listall-internal ""))))))
 
 (defun mpdired--mark (mark)
