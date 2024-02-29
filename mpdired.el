@@ -84,6 +84,7 @@
   :doc "Local keymap for MPDired."
   :full t
   :parent special-mode-map
+  ;; Navigation
   "C-n"    #'mpdired-next-line
   "n"      #'mpdired-next-line
   "<down>" #'mpdired-next-line
@@ -93,14 +94,17 @@
   "C-m"    #'mpdired-enter
   "^"      #'mpdired-goto-parent
   "o"      #'mpdired-toggle-view
+  ;; Actions
   "g"      #'mpdired-update
   "G"      #'mpdired-db-update
-  "<SPC>"  #'mpdired-pause-internal
   "N"      #'mpdired-next-internal
   "P"      #'mpdired-previous-internal
   "a"      #'mpdired-add
+  "x"      #'mpdired-flagged-delete
+  "D"      #'mpdired-delete
+  ;; Status settings and toggles
+  "<SPC>"  #'mpdired-pause-internal
   "v"      #'mpdired-set-volume-internal
-  ;; Status toggles
   "s s"    #'mpdired-stop
   "s R"    #'mpdired-toggle-repeat
   "s r"    #'mpdired-toggle-random
@@ -121,9 +125,7 @@
   "* t"    #'mpdired-toggle-marks
   "* c"    #'mpdired-change-marks
   "% d"    #'mpdired-flag-files-regexp
-  "% m"    #'mpdired-mark-files-regexp
-  "x"      #'mpdired-flagged-delete
-  "D"      #'mpdired-delete)
+  "% m"    #'mpdired-mark-files-regexp)
 
 (defface mpdired-currdir
   '((t :inherit dired-header))
