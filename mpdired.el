@@ -990,7 +990,7 @@ In the queue view, start playing the song at point."
   "Put a MESSAGE for the communication buffer."
   (with-current-buffer mpdired--comm-buffer
     (if mpdired--message
-	(setq (format "%s %s" mpdired--message message))
+	(setq mpdired--message (format "%s %s" mpdired--message message))
       (setq mpdired--message message))))
 
 (defun mpdired-add-at-point ()
