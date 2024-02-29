@@ -522,10 +522,11 @@
 	  (insert string)
 	  (set-marker (process-mark proc) (point)))
 	(if moving (goto-char (process-mark proc)))
-	;; The server has done its work.
+	;; The server has replied.
 	(cond ((re-search-backward "^ACK \\(.*\\)$" nil t)
 	       (message (match-string 1)))
 	      ((re-search-backward "^OK$" nil t)
+	       ;; Present results in the main buffer
 	       (cond ((or (eq mpdired--last-command 'listall)
 			  (eq mpdired--last-command 'listplaylist))
 		      (mpdired--present-list proc))
