@@ -954,10 +954,10 @@ In the queue view, start playing the song at point."
 
 (defun mpdired--collect-marked (want)
   "Collect entries marked with WANT."
-  (save-excursion
-    (goto-char (point-min))
-    (let ((max (point-max))
-	  result)
+  (let ((max (point-max))
+	result)
+    (save-excursion
+      (goto-char (point-min))
       (while (< (point) max)
 	(let* ((bol (mpdired--bol))
 	       (mark (get-text-property bol 'mark))
@@ -966,8 +966,15 @@ In the queue view, start playing the song at point."
 	       (uri (get-text-property bol 'uri)))
 	  (when (and mark (char-equal mark want))
 	    (push (cons id (cons type uri)) result)))
-	(forward-line))
-      (reverse result))))
+	(forward-line)))
+    ;; No marked, get the entry at point.
+    (unless result
+      (let* ((bol (mpdired--bol))
+	     (id (get-text-property bol 'id))
+	     (type (get-text-property bol 'type))
+	     (uri (get-text-property bol 'uri)))
+	(setq result (list (cons id (cons type uri))))))
+    (reverse result)))
 
 (defun mpdired-mark-files-regexp (regexp &optional mark)
   "Mark entries which matches a user provided REGEXP."
@@ -993,14 +1000,6 @@ In the queue view, start playing the song at point."
 	(setq mpdired--message (format "%s %s" mpdired--message message))
       (setq mpdired--message message))))
 
-(defun mpdired-add-at-point ()
-  (let* ((bol (mpdired--bol))
-	 (uri (get-text-property bol 'uri)))
-    (when uri
-      (mpdired--append-message (format "Adding %s..." uri))
-      (mpdired-add-internal uri)
-      (mpdired-next-line))))
-
 (defun mpdired--build-add-message (typed-uris)
   (let* ((uris (mapcar 'cdr typed-uris))
 	 (n (length uris)))
@@ -1016,10 +1015,11 @@ In the queue view, start playing the song at point."
   (interactive)
   (let* ((marked (mpdired--collect-marked ?*))
 	 (typed-uris (mapcar 'cdr marked)))
-    (cond (typed-uris
-	   (mpdired--append-message (mpdired--build-add-message typed-uris))
-	   (mpdired-add-internal typed-uris))
-	  (t (mpdired-add-at-point)))))
+    (when typed-uris
+      (mpdired--append-message (mpdired--build-add-message typed-uris))
+      (mpdired-add-internal typed-uris)
+      (when (= 1 (length typed-uris))
+	(mpdired-next-line)))))
 
 (defun mpdired-deleteid-at-point ()
   (let ((id (get-text-property (mpdired--bol) 'id)))
