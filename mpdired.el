@@ -660,6 +660,16 @@ an optional communication buffer."
     (process-send-string process "playlistid\n")
     (process-send-string process "command_list_end\n")))
 
+(defun mpdired-remove-playlist-internal (uri)
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'remove-playlist)
+    (process-send-string process "command_list_begin\n")
+    (if (listp uri)
+	(dolist (u uri)
+	  (process-send-string process (format "rm \"%s\"\n" u)))
+      (process-send-string process (format "rm \"%s\"\n" uri)))
+    (process-send-string process "command_list_end\n")))
+
 (defun mpdired-pause-internal (&optional buffer)
   "Toggle pause."
   (interactive)
@@ -1034,11 +1044,23 @@ In the queue view, start playing the song at point."
 		  (get-text-property bol 'id)))))
       (mpdired-deleteid-internal id))))
 
+(defun mpdired-remove-playlist-at-point ()
+  (let* ((bol (mpdired--bol))
+	 (uri (get-text-property bol 'uri))
+	 (type (get-text-property bol 'type)))
+    (when (and type uri
+	       (eq type 'playlist))
+      (mpdired--append-message (format "Removing \"%s\"..." uri))
+      (mpdired-remove-playlist-internal uri))))
+
 (defun mpdired-delete ()
-  "Remove song at point from the queue."
+  "Remove song at point from the queue or playlist at point from the
+browser view."
   (interactive)
   (cond ((eq mpdired--view 'queue)
-	 (mpdired-deleteid-at-point))))
+	 (mpdired-deleteid-at-point))
+	((eq mpdired--view 'browser)
+	 (mpdired-remove-playlist-at-point))))
 
 (defun mpdired--find-next-unmarked-id ()
   (save-excursion
