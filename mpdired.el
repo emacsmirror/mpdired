@@ -47,12 +47,13 @@
 ;; There is no timers set by MPDired, so updating anything always
 ;; comes from a user action.
 ;;
-;; The browser view is built only from the MPD's "listall" command.
-;; The MPD's documentation does *not* recommend to do so but AFAIU
-;; there is no other way to access your music collection in terms of
-;; directories and files.  As my music collection is already ordered
-;; into directories and with meaningful filenames, I prefer to use
-;; this interface rather then to rely on files' tags.
+;; The browser view is built from the MPD's "listall" and
+;; "listplaylists" commands.  The MPD's documentation does *not*
+;; recommend to do so but AFAIU there is no other way to access your
+;; music collection in terms of directories and files.  As my music
+;; collection is already ordered into directories and with meaningful
+;; filenames, I prefer to use this interface rather then to rely on
+;; files' tags.
 ;;
 ;; If your music collection consists of just a set of not very well
 ;; named files into one big directory and that you rely on tags such
@@ -63,8 +64,8 @@
 ;;
 ;; - MPDired does not handle MPD server with password.
 ;;
-;; - Marks are really temporary.  As I rebuild the views often and the
-;;   mark is only stored in text property they will be wipe out
+;; - Marks are *very* temporary.  As I rebuild the views often and the
+;;   marks are only stored in text properties they will be wiped out
 ;;   regularly.
 ;;
 ;; - some URI based commands work in both view. So for example, in the
@@ -77,7 +78,7 @@
   :type 'string)
 
 (defcustom mpdired-port (or (getenv "MPD_PORT") 6600)
-  "Host for MPD."
+  "Port for MPD."
   :type 'integer)
 
 (defvar-keymap mpdired-mode-map
@@ -166,6 +167,7 @@
 (defvar-local mpdired--message nil)
 
 (defun mpdired--subdir-p (dir-a dir-b)
+  "Is DIR-B a sub-directory of DIR-A?"
   (let ((pos (string-search dir-a dir-b)))
     (and pos (zerop pos))))
 
@@ -173,7 +175,8 @@
   ;; Recursively rebuild the directory hierarchy from a "listall"
   ;; command into a list.  In the output, a directory is list which
   ;; `car' is its name and its `cdr' is the files or other directory
-  ;; it contains.
+  ;; it contains.  Leaves are conses in the form '(file . "name") or
+  ;; '(playlist . "name").
   (catch 'exit
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
@@ -189,11 +192,13 @@
 		     (string= "playlist" type))
 		 (push (cons (intern type) name) accum))
 		((string= "directory" type)
-		 ;; This new directory is either a subdir of the current
-		 ;; one or a new directory of the same level of the
-		 ;; current one.  In this last case we need to go one
-		 ;; line backward (because we will go forward later) and
-		 ;; quit the loop.
+		 ;; This new directory NAME is either a subdir of the
+		 ;; current one or a new directory of the same level
+		 ;; of the current one.  In the former case, we need
+		 ;; to parse and accumuate this new sub-directory.  In
+		 ;; the latter case we need to go one line backward
+		 ;; (because we will go forward later) and quit the
+		 ;; current loop.
 		 (cond ((mpdired--subdir-p current name)
 			(forward-line)
 			(push (mpdired--parse-listall-1 name (list name)) accum))
@@ -207,11 +212,12 @@
   (goto-char (point-min))
   (setq mpdired--parse-endp nil)
   ;; XXX Empty string is the directory name of the toplevel directory.
-  ;; It have the good property of being a prefix of any string.
+  ;; It have the good property of being a prefix of any string so it
+  ;; works with `mpdired--subdir-p'.
   (mpdired--parse-listall-1 "" (list "")))
 
-;; All my functions are called *-queue but the correct are using the
-;; correct "playlistid" MPD interface.
+;; All my functions are called *-queue but they are using the correct
+;; "playlistid" MPD interface.
 (defun mpdired--parse-queue ()
   ;; Called from the communication buffer.
   (goto-char (point-min))
@@ -248,11 +254,13 @@
 	    (setq elapsed (string-to-number (match-string 1))
 		  duration (string-to-number (match-string 2)))))
 	;; When we enconter our first "file:" the status parsing is
-	;; done so store what we've discovered so far.
+	;; done so store what we've discovered so far and do not try
+	;; to parse status anymore.
 	(when (and in-status-p
 		   (save-excursion (re-search-forward "^file: .*$" eol t 1)))
 	  (setq in-status-p nil)
-	  ;; Save status in main buffer
+	  ;; Save status in main buffer and put current song infos at
+	  ;; the beginning of the result.
 	  (with-current-buffer mpdired--main-buffer
 	    (setq mpdired--status
 		  (list state volume repeat random single consume)))
@@ -322,15 +330,16 @@
   "Local copy of the MPD status.  It will updated regularly.")
 (defvar-local mpdired--error nil)
 
-;; I tried to use markers but since I often erase the buffer's
-;; content, these markers are reset to 1.
+;; I have tried to use markers here but since I often erase the
+;; buffer's content, these markers are reset to 1.
 (defvar-local mpdired--browser-point nil
   "Saved point position in the browser view.")
 (defvar-local mpdired--songid-point nil
   "Songid for point position in the queue view.")
 
 (defun mpdired--bol ()
-  "Correct beginning of line in a MPDired buffer."
+  "Correct beginning of line in a MPDired buffer.  First two columns are
+used for mark followed by a space."
   (+ 2 (line-beginning-position)))
 
 (defun mpdired--short-name (string)
@@ -432,8 +441,8 @@
 	    playlist mpdired--playlist))
     (with-current-buffer (get-buffer-create main-buffer)
       (let* ((inhibit-read-only t)
-	     ;; `content' is always of the form ("" rest...) so if there
-	     ;; is only one "rest" use it as content.
+	     ;; `content' is always of the form ("" rest...) so if
+	     ;; there is only one element in rest use it as content.
 	     (content (if (cddr content) content (cadr content)))
 	     (top (if playlist
 		      playlist
@@ -526,6 +535,9 @@
 	(if moving (goto-char (process-mark proc)))
 	;; The server has replied.
 	(cond ((re-search-backward "^ACK \\(.*\\)$" nil t)
+	       ;; For errors on "listall" and "listplaylist" commands
+	       ;; propagate the error upstream because actions would
+	       ;; be taken.  Otherwise, just output it.
 	       (cond ((string= (match-string 1)
 			       "[50@0] {listall} No such directory")
 		      (with-current-buffer mpdired--main-buffer
@@ -543,7 +555,7 @@
 		     ((or (eq mpdired--last-command 'queue)
 			  (eq mpdired--last-command 'deleteid))
 		      (mpdired--present-queue proc)))
-	       ;; Display and reset message.
+	       ;; Display and reset information message.
 	       (when mpdired--message
 		 (message (format "%s done." mpdired--message))
 		 (setq mpdired--message nil))))))))
@@ -590,7 +602,8 @@
 (defmacro mpdired--with-comm-buffer (process buffer &rest body)
   "Helper macro when sending a command via the communication buffer.
 PROCESS will be bound to the communication buffer's process.  BUFFER is
-an optional communication buffer."
+an optional communication buffer that would be used instead of
+`mpdired--comm-buffer'."
   (declare (indent defun))
   `(with-current-buffer (or ,buffer mpdired--comm-buffer)
      (erase-buffer)
@@ -670,7 +683,7 @@ an optional communication buffer."
     (process-send-string process "command_list_end\n")))
 
 (defun mpdired-pause-internal (&optional buffer)
-  "Toggle pause."
+  "Toggles pause."
   (interactive)
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'pause
@@ -678,7 +691,7 @@ an optional communication buffer."
     (process-send-string process "pause\n")))
 
 (defun mpdired-db-update ()
-  "Issue a database update."
+  "Issues a database update."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'stop
@@ -694,7 +707,7 @@ an optional communication buffer."
     (process-send-string process "stop\n")))
 
 (defun mpdired-toggle-repeat ()
-  "Toggle repeat mode."
+  "Toggles repeat mode."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'repeat)
@@ -705,7 +718,7 @@ an optional communication buffer."
 			   (format "repeat %d\n" (if repeat 0 1))))))
 
 (defun mpdired-toggle-random ()
-  "Toggle random mode."
+  "Toggles random mode."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'random)
@@ -717,7 +730,7 @@ an optional communication buffer."
 
 ;; XXX no oneshot support
 (defun mpdired-toggle-single ()
-  "Toggle single mode."
+  "Toggles single mode."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'single)
@@ -729,7 +742,7 @@ an optional communication buffer."
 
 ;; XXX no oneshot support
 (defun mpdired-toggle-consume ()
-  "Toggle consume mode."
+  "Toggles consume mode."
   (interactive)
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'consume)
@@ -740,21 +753,21 @@ an optional communication buffer."
 			   (format "consume %d\n" (if consume 0 1))))))
 
 (defun mpdired-next-internal (&optional buffer)
-  "Start playing the next song from the queue."
+  "Starts playing the next song from the queue."
   (interactive)
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'next)
     (process-send-string process "next\n")))
 
 (defun mpdired-previous-internal (&optional buffer)
-  "Start playing the previous song from the queue."
+  "Starts playing the previous song from the queue."
   (interactive)
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'previous)
     (process-send-string process "previous\n")))
 
 (defun mpdired-set-volume-internal (volume &optional buffer)
-  "Change MPD volume.  VOLUME is a number between 0 and 100."
+  "Changes MPD volume.  VOLUME is a number between 0 and 100."
   (interactive "nVolume: ")
   (mpdired--with-comm-buffer process buffer
     (setq mpdired--last-command 'setvol)
@@ -762,6 +775,7 @@ an optional communication buffer."
 			 (format "setvol %d\n" (min 100 (max 0 volume))))))
 
 (defun mpdired-playlist-create (name)
+  "Creates a new MPD's playlist named NAME with the queue content."
   (interactive "MPlaylist name: ")
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'playlist-create)
@@ -817,8 +831,8 @@ an optional communication buffer."
     (when id (mpdired-playid-internal id))))
 
 (defun mpdired-enter ()
-  "In the browser view, browse the entry at point.
-In the queue view, start playing the song at point."
+  "In the browser view, browses the entry at point.
+In the queue view, starts playing the song at point."
   (interactive)
   (cond ((eq mpdired--view 'browser)
 	 (setq mpdired--browser-point nil)
@@ -842,7 +856,7 @@ In the queue view, start playing the song at point."
 	     (mpdired--unsplit (butlast split) "/")))))
 
 (defun mpdired-goto-parent ()
-  "Browse the parent directory of the current one."
+  "Browses the parent directory of the current one."
   (interactive)
   (let ((parent (mpdired--parent)))
     (cond (parent
@@ -853,7 +867,7 @@ In the queue view, start playing the song at point."
 	  (t (message "You are at the toplevel.")))))
 
 (defun mpdired-toggle-view ()
-  "Toggle between the browser and the queue view."
+  "Toggles between the browser and the queue view."
   (interactive)
   (cond ((eq mpdired--view 'browser)
 	 (mpdired-queue-internal))
@@ -898,19 +912,19 @@ In the queue view, start playing the song at point."
 	(insert-char ? )))))
 
 (defun mpdired-mark-at-point ()
-  "Mark entry at point."
+  "Marks entry at point."
   (interactive)
   (mpdired--mark ?*)
   (mpdired-next-line))
 
 (defun mpdired-flag-at-point ()
-  "Flag entry at point."
+  "Flags entry at point."
   (interactive)
   (mpdired--mark ?d)
   (mpdired-next-line))
 
 (defun mpdired-toggle-marks ()
-  "Toggle marks."
+  "Toggles marks."
   (interactive)
   (save-excursion
     (goto-char (point-min))
@@ -923,7 +937,7 @@ In the queue view, start playing the song at point."
 	(forward-line)))))
 
 (defun mpdired-change-marks (&optional old new)
-  "Change mark from OLD to NEW.  It asks the user for OLD and NEW."
+  "Changes mark from OLD to NEW.  It asks the user for OLD and NEW."
   (interactive
    (let* ((cursor-in-echo-area t)
 	  (old (progn (message "Change (old mark): ") (read-char)))
@@ -941,19 +955,19 @@ In the queue view, start playing the song at point."
 	  (forward-line))))))
 
 (defun mpdired-unmark-at-point ()
-  "Remove any mark at point."
+  "Removes any mark at point."
   (interactive)
   (mpdired--clear-mark)
   (mpdired-next-line))
 
 (defun mpdired-previous-unmark ()
-  "Remove any mark on the previous line and move to it."
+  "Removes any mark on the previous line and move to it."
   (interactive)
   (mpdired-previous-line)
   (mpdired--clear-mark))
 
 (defun mpdired-unmark-all-marks ()
-  "Remove all marks in the current buffer."
+  "Removes all marks in the current buffer."
   (interactive)
   (let ((inhibit-read-only t))
     (save-excursion
@@ -964,7 +978,7 @@ In the queue view, start playing the song at point."
 	  (forward-line))))))
 
 (defun mpdired--collect-marked (want)
-  "Collect entries marked with WANT."
+  "Collects entries marked with WANT."
   (let ((max (point-max))
 	result)
     (save-excursion
@@ -988,7 +1002,7 @@ In the queue view, start playing the song at point."
     (reverse result)))
 
 (defun mpdired-mark-files-regexp (regexp &optional mark)
-  "Mark entries which matches a user provided REGEXP."
+  "Marks entries which matches a user provided REGEXP."
   (interactive (list (read-regexp "Mark (regexp): ")))
   (save-excursion
     (goto-char (point-min))
@@ -1000,12 +1014,12 @@ In the queue view, start playing the song at point."
 	(forward-line)))))
 
 (defun mpdired-flag-files-regexp (regexp)
-  "Flag entries which matches a user provided REGEXP."
+  "Flags entries which matches a user provided REGEXP."
   (interactive (list (read-regexp "Flag for deletion (regexp): ")))
   (mpdired-mark-files-regexp regexp ?d))
 
 (defun mpdired--append-message (message)
-  "Put a MESSAGE for the communication buffer."
+  "Puts a MESSAGE for the communication buffer."
   (with-current-buffer mpdired--comm-buffer
     (if mpdired--message
 	(setq mpdired--message (format "%s %s" mpdired--message message))
@@ -1053,7 +1067,7 @@ In the queue view, start playing the song at point."
       (mpdired-remove-playlist-internal uri))))
 
 (defun mpdired-delete ()
-  "Remove song at point from the queue or playlist at point from the
+  "Removes song at point from the queue or playlist at point from the
 browser view."
   (interactive)
   (cond ((eq mpdired--view 'queue)
@@ -1071,7 +1085,7 @@ browser view."
 	(get-text-property (mpdired--bol) 'id)))))
 
 (defun mpdired-flagged-delete ()
-  "Remove flagged songs from the queue."
+  "Removes flagged songs from the queue."
   (interactive)
   (when (eq mpdired--view 'queue)
     (let* ((flagged (mpdired--collect-marked ?d))
@@ -1081,7 +1095,7 @@ browser view."
 	(mpdired-deleteid-internal ids)))))
 
 (defun mpdired-update ()
-  "Update the buffer content.  It works both for browser and queue view."
+  "Updates the buffer content.  It works both for browser and queue view."
   (interactive)
   (cond ((eq mpdired--view 'queue)
 	 (mpdired-queue-internal))
@@ -1090,8 +1104,11 @@ browser view."
 	     (mpdired-listall-internal mpdired--directory)
 	   (mpdired-listall-internal "")))))
 
+
+;; Global commands (i.e. usable outside of the MPDired buffer).
 (defun mpdired--prepare ()
-  ;; Get user's host and service current setting.
+  "Prepares a connection for global commands with user's host and port
+settings.  It returns a cons with communication and main buffers names."
   (let* ((localp (mpdired--local-p mpdired-host))
 	 (host (if localp (expand-file-name mpdired-host) mpdired-host))
 	 (service (if localp host mpdired-port))
@@ -1100,10 +1117,8 @@ browser view."
     (mpdired--maybe-init host service localp)
     (cons comm-name main-name)))
 
-
-;; Global commands (i.e. usable outside of the MPDired buffer).
 (defun mpdired-pause ()
-  "Toggle MPDired pause."
+  "Toggles MPDired pause."
   (interactive)
   (let ((buffers (mpdired--prepare)))
     (mpdired-pause-internal (car buffers))))
@@ -1121,7 +1136,7 @@ browser view."
     (mpdired-previous-internal (car buffers))))
 
 (defun mpdired-set-volume (volume)
-  "Set MPDired volume."
+  "Sets MPDired volume."
   (interactive "nVolume: ")
   (let ((buffers (mpdired--prepare)))
     (mpdired-set-volume-internal (min 100 (max 0 volume)) (car buffers))))
