@@ -488,7 +488,6 @@
 	;; Insert content
 	(save-excursion
 	  ;; Status header
-	  (goto-char (point-min))
 	  (mpdired--insert-status)
 	  ;; Songs
 	  (dolist (song songs) (mpdired--insert-song song)))
