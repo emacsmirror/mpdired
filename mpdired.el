@@ -560,10 +560,6 @@ used for mark followed by a space."
 		 (message (format "%s done." mpdired--message))
 		 (setq mpdired--message nil))))))))
 
-(defun mpdired--sentinel (process event)
-  (unless (string-search "connection broken" event)
-    (message "Process: %s had the event '%s'" process event)))
-
 (defun mpdired--local-p (host)
   "Is HOST a local socket?"
   ;; Hack: if the `expand-file-name' of host leads to an existing
@@ -592,8 +588,7 @@ used for mark followed by a space."
 			    :service service
 			    :family (if localp 'local)
 			    :coding 'utf-8
-			    :filter 'mpdired--filter
-			    :sentinel 'mpdired--sentinel)))
+			    :filter 'mpdired--filter)))
 	  (setq mpdired--network-params params
 		mpdired--main-buffer (mpdired--main-name host service localp))
 	  (set-process-buffer (apply 'make-network-process params)
