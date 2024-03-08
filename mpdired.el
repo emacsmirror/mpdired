@@ -591,7 +591,7 @@ used for mark followed by a space."
 			    :service service
 			    :family (if localp 'local)
 			    :coding 'utf-8
-			    :filter 'mpdired--filter)))
+			    :filter #'mpdired--filter)))
 	  (setq mpdired--network-params params
 		mpdired--main-buffer (mpdired--main-name host service localp))
 	  (set-process-buffer (apply 'make-network-process params)
@@ -618,7 +618,7 @@ an optional communication buffer that would be used instead of
     ;; At toplevel also lists MPD's playlists.
     (when (string= "" path)
       (process-send-string process "listplaylists\n"))
-    (process-send-string process (format "listall \"%s\"\n" path))
+    (process-send-string process (format "listall %S\n" path))
     (process-send-string process "command_list_end\n")))
 
 (defun mpdired-listplaylist-internal (path &optional ascending-p)
@@ -626,7 +626,7 @@ an optional communication buffer that would be used instead of
     (setq mpdired--last-command 'listplaylist
 	  mpdired--ascending-p ascending-p
 	  mpdired--playlist path)
-    (process-send-string process (format "listplaylist \"%s\"\n" path))))
+    (process-send-string process (format "listplaylist %S\n" path))))
 
 (defun mpdired-queue-internal (&optional buffer)
   (mpdired--with-comm-buffer process buffer
@@ -652,9 +652,9 @@ an optional communication buffer that would be used instead of
 		(uri (cdr typed-uri)))
 	    ;; "add" is called "load" for playlists
 	    (if (eq type 'playlist)
-		(process-send-string process (format "load \"%s\"\n" uri))
-	      (process-send-string process (format "add \"%s\"\n" uri)))))
-      (process-send-string process (format "add \"%s\"\n" typed-uris)))
+		(process-send-string process (format "load %S\n" uri))
+	      (process-send-string process (format "add %S\n" uri)))))
+      (process-send-string process (format "add %S\n" typed-uris)))
     (process-send-string process "command_list_end\n")))
 
 (defun mpdired-deleteid-internal (id)
@@ -676,8 +676,8 @@ an optional communication buffer that would be used instead of
     (process-send-string process "command_list_begin\n")
     (if (listp uri)
 	(dolist (u uri)
-	  (process-send-string process (format "rm \"%s\"\n" u)))
-      (process-send-string process (format "rm \"%s\"\n" uri)))
+	  (process-send-string process (format "rm %S\n" u)))
+      (process-send-string process (format "rm %S\n" uri)))
     (process-send-string process "command_list_end\n")))
 
 (defun mpdired-pause-internal (&optional buffer)
@@ -777,13 +777,13 @@ an optional communication buffer that would be used instead of
   (interactive "MPlaylist name: ")
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'playlist-create)
-    (process-send-string process (format "save \"%s\"\n" name))))
+    (process-send-string process (format "save %S\n" name))))
 
 (defun mpdired-playlist-append (name)
   (interactive "MPlaylist name: ")
   (mpdired--with-comm-buffer process nil
     (setq mpdired--last-command 'playlist-append)
-    (process-send-string process (format "save \"%s\" append\n" name))))
+    (process-send-string process (format "save %S append\n" name))))
 
 (defun mpdired--save-point ()
   (cond ((eq mpdired--view 'queue)
@@ -1026,11 +1026,11 @@ In the queue view, starts playing the song at point."
 (defun mpdired--build-add-message (typed-uris)
   (let* ((uris (mapcar 'cdr typed-uris))
 	 (n (length uris)))
-    (cond ((= n 1) (format "Adding \"%s\"..." (car uris)))
+    (cond ((= n 1) (format "Adding %S..." (car uris)))
 	  ((= n 2)
-	   (format "Adding \"%s\" and \"%s\"..." (car uris) (cadr uris)))
+	   (format "Adding %S and %S..." (car uris) (cadr uris)))
 	  ((> n 2)
-	   (format "Adding \"%s\", \"%s\" and %d others..."
+	   (format "Adding %S, %S and %d others..."
 		   (car uris) (cadr uris) (- n 2))))))
 
 (defun mpdired-add ()
@@ -1061,7 +1061,7 @@ In the queue view, starts playing the song at point."
 	 (type (get-text-property bol 'type)))
     (when (and type uri
 	       (eq type 'playlist))
-      (mpdired--append-message (format "Removing \"%s\"..." uri))
+      (mpdired--append-message (format "Removing %S..." uri))
       (mpdired-remove-playlist-internal uri))))
 
 (defun mpdired-delete ()
