@@ -839,6 +839,8 @@ In the queue view, starts playing the song at point."
 	 (mpdired-playid-at-point))))
 
 (defun mpdired--unsplit (list separator)
+  "Concatenates all elements of LIST (should be strings) separated by the
+SEPARATOR string."
   (let (res)
     (dolist (e (butlast list))
       (push e res)
