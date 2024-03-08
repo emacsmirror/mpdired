@@ -354,7 +354,7 @@ used for mark followed by a space."
 	 (type (get-text-property bol 'type))
 	 (mark (get-text-property bol 'mark)))
     (remove-text-properties bol eol '(face))
-    (cond ((and mark (char-equal mark ?d))
+    (cond ((and mark (char-equal mark ?D))
 	   (put-text-property bol eol 'face 'mpdired-flagged))
 	  ((and mark (char-equal mark ?*))
 	   (put-text-property bol eol 'face 'mpdired-marked))
@@ -918,7 +918,7 @@ In the queue view, starts playing the song at point."
 (defun mpdired-flag-at-point ()
   "Flags entry at point."
   (interactive)
-  (mpdired--mark ?d)
+  (mpdired--mark ?D)
   (mpdired-next-line))
 
 (defun mpdired-toggle-marks ()
@@ -1014,7 +1014,7 @@ In the queue view, starts playing the song at point."
 (defun mpdired-flag-files-regexp (regexp)
   "Flags entries which matches a user provided REGEXP."
   (interactive (list (read-regexp "Flag for deletion (regexp): ")))
-  (mpdired-mark-files-regexp regexp ?d))
+  (mpdired-mark-files-regexp regexp ?D))
 
 (defun mpdired--append-message (message)
   "Puts a MESSAGE for the communication buffer."
@@ -1086,7 +1086,7 @@ browser view."
   "Removes flagged songs from the queue."
   (interactive)
   (when (eq mpdired--view 'queue)
-    (let* ((flagged (mpdired--collect-marked ?d))
+    (let* ((flagged (mpdired--collect-marked ?D))
 	   (ids (mapcar 'car flagged)))
       (when flagged
 	(setf mpdired--songid-point (mpdired--find-next-unmarked-id))
