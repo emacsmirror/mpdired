@@ -208,7 +208,7 @@
 		       (t (forward-line -1)
 			  (throw 'exit t)))))))
       (forward-line)))
-  (reverse accum))
+  (nreverse accum))
 
 (defun mpdired--parse-listall ()
   ;; Called from the communication buffer.
