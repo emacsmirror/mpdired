@@ -907,7 +907,7 @@ In the queue view, starts playing the song at point."
       (save-excursion
 	(goto-char (line-beginning-position))
 	(delete-char 1)
-	(insert-char ? )))))
+	(insert-char ?\s)))))
 
 (defun mpdired-mark-at-point ()
   "Marks entry at point."
