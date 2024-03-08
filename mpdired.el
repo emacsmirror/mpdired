@@ -2,10 +2,10 @@
 
 ;; Copyright (C) 2024  Manuel Giraud
 
+;; Package-Requires: ((emacs "29"))
+
 ;; Author: Manuel Giraud <manuel@ledu-giraud.fr>
 ;; Keywords: multimedia
-
-;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -40,7 +40,7 @@
 ;; buffer will connect to the buffer local server.  This way, you can
 ;; manage more than one MPD server with multiple MPDired buffers.
 
-;;; Philosophy:
+;;;; Philosophy:
 ;;
 ;; MPDired is designed to be the least intrusive.  Nothing will be
 ;; shown into the mode line, which I consider to be user's territory.
