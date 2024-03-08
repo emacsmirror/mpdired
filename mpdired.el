@@ -77,9 +77,12 @@
   "Host for MPD."
   :type 'string)
 
-(defcustom mpdired-port (or (getenv "MPD_PORT") 6600)
+(defcustom mpdired-port
+  (let* ((port-env (getenv "MPD_PORT"))
+	 (port (and port-env (string-to-number port-env))))
+    (or port 6600))
   "Port for MPD."
-  :type 'integer)
+  :type 'natnum)
 
 (defvar-keymap mpdired-mode-map
   :doc "Local keymap for MPDired."
