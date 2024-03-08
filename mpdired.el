@@ -456,7 +456,7 @@ used for mark followed by a space."
 	(save-excursion
 	  (when (stringp top)
 	    (insert (propertize top 'face 'mpdired-currdir) ":\n"))
-	  (dolist (e data) (mpdired--insert-entry e)))
+	  (mapc #'mpdired--insert-entry data))
 	;; Set mode and memorize stuff
 	(mpdired-mode)
 	(if ascending-p (setq from mpdired--directory))
@@ -502,7 +502,7 @@ used for mark followed by a space."
 	  ;; Status header
 	  (mpdired--insert-status)
 	  ;; Songs
-	  (dolist (song songs) (mpdired--insert-song song)))
+	  (mapc #'mpdired--insert-song songs))
 	;; Go to the current song and display elasped time with a
 	;; different face on its URI.
 	(save-excursion
