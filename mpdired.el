@@ -2,6 +2,7 @@
 
 ;; Copyright (C) 2024  Manuel Giraud
 
+;; Version: 1-pre
 ;; Package-Requires: ((emacs "29"))
 
 ;; Author: Manuel Giraud <manuel@ledu-giraud.fr>
