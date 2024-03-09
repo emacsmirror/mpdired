@@ -90,47 +90,45 @@
   :full t
   :parent special-mode-map
   ;; Navigation
-  "C-n"    #'mpdired-next-line
-  "n"      #'mpdired-next-line
-  "<down>" #'mpdired-next-line
-  "C-p"    #'mpdired-previous-line
-  "p"      #'mpdired-previous-line
-  "<up>"   #'mpdired-previous-line
-  "C-m"    #'mpdired-enter
-  "^"      #'mpdired-goto-parent
-  "o"      #'mpdired-toggle-view
+  "<remap> <next-line>"     #'mpdired-next-line
+  "<remap> <previous-line>" #'mpdired-previous-line
+  "n"                       #'mpdired-next-line
+  "p"                       #'mpdired-previous-line
+  "C-m"                     #'mpdired-enter
+  "^"                       #'mpdired-goto-parent
+  "o"                       #'mpdired-toggle-view
   ;; Actions
-  "g"      #'mpdired-update
-  "G"      #'mpdired-db-update
-  "N"      #'mpdired-next-internal
-  "P"      #'mpdired-previous-internal
-  "a"      #'mpdired-add
-  "x"      #'mpdired-flagged-delete
-  "D"      #'mpdired-delete
+  "<remap> <revert-buffer>" #'mpdired-update
+  "G"                       #'mpdired-db-update
+  "N"                       #'mpdired-next-internal
+  "P"                       #'mpdired-previous-internal
+  "a"                       #'mpdired-add
+  "x"                       #'mpdired-flagged-delete
+  "D"                       #'mpdired-delete
   ;; Status settings and toggles
-  "<SPC>"  #'mpdired-pause-internal
-  "v"      #'mpdired-set-volume-internal
-  "s s"    #'mpdired-stop
-  "s R"    #'mpdired-toggle-repeat
-  "s r"    #'mpdired-toggle-random
-  "s S"    #'mpdired-toggle-single
-  "s c"    #'mpdired-toggle-consume
+  "<SPC>"                   #'mpdired-pause-internal
+  "v"                       #'mpdired-set-volume-internal
+  "s s"                     #'mpdired-stop
+  "s R"                     #'mpdired-toggle-repeat
+  "s r"                     #'mpdired-toggle-random
+  "s S"                     #'mpdired-toggle-single
+  "s c"                     #'mpdired-toggle-consume
   ;; Playlist commands
-  "l c"    #'mpdired-playlist-create
-  "l a"    #'mpdired-playlist-append
+  "l c"                     #'mpdired-playlist-create
+  "l a"                     #'mpdired-playlist-append
   ;; Marks
-  "m"      #'mpdired-mark-at-point
-  "* m"    #'mpdired-mark-at-point
-  "d"      #'mpdired-flag-at-point
-  "u"      #'mpdired-unmark-at-point
-  "<DEL>"  #'mpdired-previous-unmark
-  "* !"    #'mpdired-unmark-all-marks
-  "U"      #'mpdired-unmark-all-marks
-  "t"      #'mpdired-toggle-marks
-  "* t"    #'mpdired-toggle-marks
-  "* c"    #'mpdired-change-marks
-  "% d"    #'mpdired-flag-files-regexp
-  "% m"    #'mpdired-mark-files-regexp)
+  "m"                       #'mpdired-mark-at-point
+  "* m"                     #'mpdired-mark-at-point
+  "d"                       #'mpdired-flag-at-point
+  "u"                       #'mpdired-unmark-at-point
+  "<DEL>"                   #'mpdired-previous-unmark
+  "* !"                     #'mpdired-unmark-all-marks
+  "U"                       #'mpdired-unmark-all-marks
+  "t"                       #'mpdired-toggle-marks
+  "* t"                     #'mpdired-toggle-marks
+  "* c"                     #'mpdired-change-marks
+  "% d"                     #'mpdired-flag-files-regexp
+  "% m"                     #'mpdired-mark-files-regexp)
 
 (defface mpdired-currdir
   '((t :inherit dired-header))
