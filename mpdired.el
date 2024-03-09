@@ -347,7 +347,9 @@ used for mark followed by a space."
   (+ 2 (line-beginning-position)))
 
 (defun mpdired--short-name (string)
-  (car (last (split-string string "/"))))
+  (or (and (string-match "/\\([^/]*\\)\\'" string)
+	   (match-string 1 string))
+      string))
 
 (defun mpdired--reset-face ()
   (let* ((bol (mpdired--bol))
