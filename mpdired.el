@@ -943,9 +943,8 @@ SEPARATOR string."
   "Changes mark from OLD to NEW.  It asks the user for OLD and NEW."
   (interactive
    (let* ((cursor-in-echo-area t)
-	  (old (progn (message "Change (old mark): ") (read-char)))
-	  (new (progn (message  "Change %c marks to (new mark): " old)
-		      (read-char))))
+	  (old (read-char "Change (old mark): "))
+	  (new (read-char (format "Change %c marks to (new mark): " old))))
      (list old new)))
   (let ((inhibit-read-only t))
     (save-excursion
