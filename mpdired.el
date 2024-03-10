@@ -517,7 +517,7 @@ used for mark followed by a space."
 	    (let* ((bol (mpdired--bol))
 		   (eol (line-end-position))
 		   (x (/ (* elapsed (- eol bol)) duration)))
-	      (put-text-property bol (+ bol x) 'face 'mpdired-progress))))
+	      (put-text-property (+ bol x) eol 'face 'mpdired-progress))))
 	;; Go to bol no matter what
 	(goto-char (mpdired--bol))
 	;; Set mode, restore point and memorize stuff
