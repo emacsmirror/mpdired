@@ -1,6 +1,6 @@
 ;;; mpdired.el --- A dired-like client for Music Player Daemon -*- lexical-binding: t -*-
 
-;; Copyright (C) 2024  Manuel Giraud
+;; Copyright (C) 2024  Free Software Foundation, Inc.
 
 ;; Version: 1-pre
 ;; Package-Requires: ((emacs "29"))
