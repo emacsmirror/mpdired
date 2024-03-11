@@ -421,12 +421,11 @@ used for mark followed by a space."
     (insert "\n")))
 
 (defun mpdired--goto-id (songid)
-  (let ((max (point-max)))
-    (while (and (< (point) max)
-		(let ((id (get-text-property (mpdired--bol) 'id)))
-		  (or (null id)
-		      (and id (/= songid id)))))
-      (mpdired--next-line))))
+  (while (and (not (eobp))
+	      (let ((id (get-text-property (mpdired--bol) 'id)))
+		(or (null id)
+		    (and id (/= songid id)))))
+    (mpdired--next-line)))
 
 (defun mpdired--present-list (proc)
   ;; Called by filter of the communication buffer.
@@ -464,12 +463,11 @@ used for mark followed by a space."
 	;; Finally move point to the correct place.
 	(cond ((and ascending-p from)
 	       (goto-char (point-min))
-	       (let ((max (point-max)))
-		 (while (and (< (point) max)
-			     (let ((uri (get-text-property (mpdired--bol) 'uri)))
-			       (or (null uri)
-				   (and uri (not (string= from uri))))))
-		   (forward-line)))
+	       (while (and (not (eobp))
+			   (let ((uri (get-text-property (mpdired--bol) 'uri)))
+			     (or (null uri)
+				 (and uri (not (string= from uri))))))
+		 (forward-line))
 	       (goto-char (mpdired--bol))
 	       (setq mpdired--browser-point (point)))
 	      (mpdired--browser-point
@@ -505,12 +503,11 @@ used for mark followed by a space."
 	;; different face on its URI.
 	(save-excursion
 	  (when songid
-	    (let ((max (point-max)))
-	      (while (and (< (point) max)
-			  (let ((id (get-text-property (mpdired--bol) 'id)))
-			    (or (null id)
-				(and id (/= songid id)))))
-		(forward-line)))
+	    (while (and (not (eobp))
+			(let ((id (get-text-property (mpdired--bol) 'id)))
+			  (or (null id)
+			      (and id (/= songid id)))))
+	      (forward-line))
 	    (let* ((bol (mpdired--bol))
 		   (eol (line-end-position))
 		   (x (/ (* elapsed (- eol bol)) duration)))
@@ -931,13 +928,12 @@ SEPARATOR string."
   (interactive)
   (save-excursion
     (goto-char (point-min))
-    (let ((max (point-max)))
-      (while (< (point) max)
-	(let ((mark (get-text-property (mpdired--bol) 'mark)))
-	  (if (and mark (char-equal mark ?*))
-	      (mpdired--clear-mark)
-	    (mpdired--mark ?*)))
-	(forward-line)))))
+    (while (not (eobp))
+      (let ((mark (get-text-property (mpdired--bol) 'mark)))
+	(if (and mark (char-equal mark ?*))
+	    (mpdired--clear-mark)
+	  (mpdired--mark ?*)))
+      (forward-line))))
 
 (defun mpdired-change-marks (&optional old new)
   "Changes mark from OLD to NEW.  It asks the user for OLD and NEW."
@@ -949,12 +945,11 @@ SEPARATOR string."
   (let ((inhibit-read-only t))
     (save-excursion
       (goto-char (point-min))
-      (let ((max (point-max)))
-	(while (< (point) max)
-	  (let ((mark (get-text-property (mpdired--bol) 'mark)))
-	    (when (and mark (char-equal mark old))
-	      (mpdired--mark new)))
-	  (forward-line))))))
+      (while (not (eobp))
+	(let ((mark (get-text-property (mpdired--bol) 'mark)))
+	  (when (and mark (char-equal mark old))
+	    (mpdired--mark new)))
+	(forward-line)))))
 
 (defun mpdired-unmark-at-point ()
   "Removes any mark at point."
@@ -974,18 +969,16 @@ SEPARATOR string."
   (let ((inhibit-read-only t))
     (save-excursion
       (goto-char (point-min))
-      (let ((max (point-max)))
-	(while (< (point) max)
-	  (mpdired--clear-mark)
-	  (forward-line))))))
+      (while (not (eobp))
+	(mpdired--clear-mark)
+	(forward-line)))))
 
 (defun mpdired--collect-marked (want)
   "Collects entries marked with WANT."
-  (let ((max (point-max))
-	result)
+  (let (result)
     (save-excursion
       (goto-char (point-min))
-      (while (< (point) max)
+      (while (not (eobp))
 	(let* ((bol (mpdired--bol))
 	       (mark (get-text-property bol 'mark))
 	       (id (get-text-property bol 'id))
@@ -1008,9 +1001,8 @@ SEPARATOR string."
   (interactive (list (read-regexp "Mark (regexp): ")))
   (save-excursion
     (goto-char (point-min))
-    (let ((mark (or mark ?*))
-	  (max (point-max)))
-      (while (< (point) max)
+    (let ((mark (or mark ?*)))
+      (while (not (eobp))
 	(when (re-search-forward regexp (line-end-position) t)
 	  (mpdired--mark mark))
 	(forward-line)))))
@@ -1079,12 +1071,11 @@ browser view."
 
 (defun mpdired--find-next-unmarked-id ()
   (save-excursion
-    (let ((max (point-max)))
-      (while (and (< (point) max)
-		  (get-text-property (mpdired--bol) 'mark))
-	(forward-line))
-      (unless (>= (mpdired--bol) max)
-	(get-text-property (mpdired--bol) 'id)))))
+    (while (and (not (eobp))
+		(get-text-property (mpdired--bol) 'mark))
+      (forward-line))
+    (unless (eobp)
+      (get-text-property (mpdired--bol) 'id))))
 
 (defun mpdired-flagged-delete ()
   "Removes flagged songs from the queue."
