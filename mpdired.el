@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2024  Free Software Foundation, Inc.
 
-;; Version: 1-pre
+;; Version: 1
 ;; Package-Requires: ((emacs "29"))
 
 ;; Author: Manuel Giraud <manuel@ledu-giraud.fr>
