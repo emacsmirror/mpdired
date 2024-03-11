@@ -595,7 +595,8 @@ used for mark followed by a space."
 	  (set-process-buffer (apply 'make-network-process params)
 			      (current-buffer))
 	  ;; Set mode in main buffer.
-	  (with-current-buffer (get-buffer-create mpdired--main-buffer) (mpdired-mode)))))))
+	  (with-current-buffer (get-buffer-create mpdired--main-buffer)
+	    (mpdired-mode)))))))
 
 (defmacro mpdired--with-comm-buffer (process buffer &rest body)
   "Helper macro when sending a command via the communication buffer.
