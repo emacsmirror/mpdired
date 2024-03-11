@@ -297,13 +297,10 @@
     (when file (push (list id file time) result))
     (reverse result)))
 
-(defun mpdired-mode ()
+(define-derived-mode mpdired-mode special-mode "MPDired"
   "Major mode for MPDired."
-  (use-local-map mpdired-mode-map)
   (set-buffer-modified-p nil)
-  (setq major-mode 'mpdired-mode
-	mode-name "MPDired"
-	truncate-lines t
+  (setq truncate-lines t
 	buffer-read-only t))
 
 (defun mpdired--hostname (host service localp)
@@ -458,8 +455,7 @@ used for mark followed by a space."
 	  (when (stringp top)
 	    (insert (propertize top 'face 'mpdired-currdir) ":\n"))
 	  (mapc #'mpdired--insert-entry data))
-	;; Set mode and memorize stuff
-	(mpdired-mode)
+	;; Memorize stuff
 	(if ascending-p (setq from mpdired--directory))
 	(setq mpdired--directory (when top top)
 	      mpdired--comm-buffer (process-buffer proc)
@@ -520,8 +516,7 @@ used for mark followed by a space."
 	      (put-text-property (+ bol x) eol 'face 'mpdired-progress))))
 	;; Go to bol no matter what
 	(goto-char (mpdired--bol))
-	;; Set mode, restore point and memorize stuff
-	(mpdired-mode)
+	;; Restore point and memorize stuff
 	(when mpdired--songid-point
 	  (mpdired--goto-id mpdired--songid-point))
 	(setq mpdired--comm-buffer (process-buffer proc)
@@ -593,10 +588,13 @@ used for mark followed by a space."
 			    :family (if localp 'local)
 			    :coding 'utf-8
 			    :filter #'mpdired--filter)))
+	  ;; Save communication buffer's state and set its process.
 	  (setq mpdired--network-params params
 		mpdired--main-buffer (mpdired--main-name host service localp))
 	  (set-process-buffer (apply 'make-network-process params)
-			      (current-buffer)))))))
+			      (current-buffer))
+	  ;; Set mode in main buffer.
+	  (with-current-buffer (get-buffer-create mpdired--main-buffer) (mpdired-mode)))))))
 
 (defmacro mpdired--with-comm-buffer (process buffer &rest body)
   "Helper macro when sending a command via the communication buffer.
