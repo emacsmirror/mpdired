@@ -440,7 +440,7 @@ used for mark followed by a space."
     (with-current-buffer (process-buffer proc)
       (setq ascending-p mpdired--ascending-p
 	    playlist mpdired--playlist))
-    (with-current-buffer (get-buffer-create main-buffer)
+    (with-current-buffer main-buffer
       (let* ((inhibit-read-only t)
 	     ;; `content' is always of the form ("" rest...) so if
 	     ;; there is only one element in rest use it as content.
@@ -491,7 +491,7 @@ used for mark followed by a space."
 	 (elapsed (cadr data))
 	 (duration (caddr data))
 	 (songs (cdddr data)))
-    (with-current-buffer (get-buffer-create main-buffer)
+    (with-current-buffer main-buffer
       (let ((inhibit-read-only t))
 	(erase-buffer)
 	;; Insert content
@@ -593,10 +593,11 @@ used for mark followed by a space."
 	  (setq mpdired--network-params params
 		mpdired--main-buffer (mpdired--main-name host service localp))
 	  (set-process-buffer (apply 'make-network-process params)
-			      (current-buffer))
-	  ;; Set mode in main buffer.
-	  (with-current-buffer (get-buffer-create mpdired--main-buffer)
-	    (mpdired-mode)))))))
+			      (current-buffer))))
+      ;; Set mode in main buffer if it does not already exist.
+      (unless (get-buffer mpdired--main-buffer)
+	(with-current-buffer (get-buffer-create mpdired--main-buffer)
+	  (mpdired-mode))))))
 
 (defmacro mpdired--with-comm-buffer (process buffer &rest body)
   "Helper macro when sending a command via the communication buffer.
