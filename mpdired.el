@@ -31,7 +31,8 @@
 ;;
 ;; In those view, most of the interactions are mimic after Dired mode
 ;; with marks and action on them.  For example, in the queue view, you
-;; could flag songs for removal with `d' and then execute with `x'.
+;; could flag songs for removal with `d' and then issue the deletion
+;; from the queue with `x'.
 ;;
 ;; MPDired connects to a MPD server using two customs: `mpdired-host'
 ;; and `mpdired-port'.  Once connected, the handle to the server is
@@ -56,10 +57,10 @@
 ;; filenames, I prefer to use this interface rather then to rely on
 ;; files' tags.
 ;;
-;; If your music collection consists of just a set of not very well
-;; named files into one big directory and that you rely on tags such
-;; as "Genre", "Album", "Artist" to find your way through it then,
-;; maybe, MPDired is not the right client for you.
+;; Be aware that if your music collection consists of just a set of
+;; not very well named files into one big directory and that you rely
+;; on tags such as "Genre", "Album", "Artist" to find your way through
+;; it then, maybe, MPDired is not the right client for you.
 
 ;;; Bugs & Funs:
 ;;
@@ -218,8 +219,8 @@
   ;; works with `mpdired--subdir-p'.
   (mpdired--parse-listall-1 "" (list "")))
 
-;; All my functions are called *-queue but they are using the correct
-;; "playlistid" MPD interface.
+;; All functions dealing with the queue are called *-queue but they
+;; are using the correct "playlistid" MPD interface.
 (defun mpdired--parse-queue ()
   ;; Called from the communication buffer.
   (goto-char (point-min))
@@ -257,7 +258,7 @@
 		  duration (string-to-number (match-string 2)))))
 	;; When we enconter our first "file:" the status parsing is
 	;; done so store what we've discovered so far and do not try
-	;; to parse status anymore.
+	;; to parse the status anymore.
 	(when (and in-status-p
 		   (save-excursion (re-search-forward "^file: .*$" eol t 1)))
 	  (setq in-status-p nil)
@@ -284,7 +285,7 @@
 	(when (re-search-forward "^Id: \\(.*\\)$" eol t 1)
 	  (setq id (string-to-number (match-string 1)))))
       (forward-line))
-    ;; There was only status but no songs
+    ;; There was only a status but no songs
     (when in-status-p
       ;; Save status in main buffer
       (with-current-buffer mpdired--main-buffer
