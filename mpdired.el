@@ -238,17 +238,13 @@
 (defun mpdired--parse-queue ()
   ;; Called from the communication buffer.
   (goto-char (point-min))
-  (setq mpdired--parse-endp nil)
   (let ((elapsed 0)
 	(duration 1)
 	(songid 0)
 	(in-status-p t)
 	state volume repeat random single consume
 	result file time id)
-    (while (not (or mpdired--parse-endp
-		    (setq mpdired--parse-endp
-			  (re-search-forward mpdired--eot
-					     (line-end-position) t 1))))
+    (while (not (re-search-forward mpdired--eot (line-end-position) t 1))
       (let ((eol (line-end-position)))
         ;; First, "status" content
 	(when in-status-p
