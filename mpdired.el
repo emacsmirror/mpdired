@@ -185,6 +185,9 @@
   (let ((pos (string-search dir-a dir-b)))
     (and pos (zerop pos))))
 
+(defvar mpdired--eot "^\\(OK\\|ACK.*\\)$"
+  "Regexp for end of transmission of a MPD command.")
+
 (defun mpdired--parse-listall-1 (current accum)
   ;; Recursively rebuild the directory hierarchy from a "listall"
   ;; command into a list.  In the output, a directory is list which
@@ -194,7 +197,7 @@
   (catch 'exit
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
-			  (re-search-forward "^\\(OK\\|ACK.*\\)$"
+			  (re-search-forward mpdired--eot
 					     (line-end-position) t 1))))
       ;; Look for file, playlist or directory line by line.
       (when
@@ -244,7 +247,7 @@
 	result file time id)
     (while (not (or mpdired--parse-endp
 		    (setq mpdired--parse-endp
-			  (re-search-forward "^\\(OK\\|ACK.*\\)$"
+			  (re-search-forward mpdired--eot
 					     (line-end-position) t 1))))
       (let ((eol (line-end-position)))
         ;; First, "status" content
