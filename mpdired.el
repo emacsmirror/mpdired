@@ -958,7 +958,7 @@ SEPARATOR string."
       (let ((mark (get-text-property (mpdired--bol) 'mark)))
 	(if (and mark (char-equal mark ?*))
 	    (mpdired--clear-mark)
-	  (mpdired--mark ?*)))
+	  (unless mark (mpdired--mark ?*))))
       (forward-line))))
 
 (defun mpdired-change-marks (&optional old new)
