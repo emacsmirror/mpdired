@@ -896,7 +896,11 @@ SEPARATOR string."
 		  ;; If get an error "No such playlist" then we may have
 		  ;; a bogus `mpdired--directory': go back to toplevel.
 		  (when (eq mpdired--error 'no-playlist)
-		    (setq mpdired--error nil)
+		    ;; Reset playlist and directory.
+		    (with-current-buffer mpdired--comm-buffer
+		      (setq mpdired--playlist nil))
+		    (setq mpdired--directory nil
+			  mpdired--error nil)
 		    (mpdired-listall-internal ""))))
 	       (t (mpdired-listall-internal ""))))))
 
