@@ -108,6 +108,7 @@
   "p"                       #'mpdired-previous-line
   "C-m"                     #'mpdired-enter
   "^"                       #'mpdired-goto-parent
+  "."                       #'mpdired-goto-current-song
   "o"                       #'mpdired-toggle-view
   ;; Actions
   "<remap> <revert-buffer>" #'mpdired-update
@@ -338,6 +339,8 @@
   "Communication buffer associated to this MPDired buffer.")
 (defvar-local mpdired--status nil
   "Local copy of the MPD status.  It will updated regularly.")
+(defvar-local mpdired--current-song nil
+  "Local copy of the current song ID.")
 (defvar-local mpdired--error nil)
 
 ;; I have tried to use markers here but since I often erase the
@@ -522,7 +525,9 @@ used for mark followed by a space."
 		   (eol (line-end-position))
 		   (x (/ (* elapsed (- eol bol)) duration)))
 	      (when (> eol (+ bol x))
-		(put-text-property (+ bol x) eol 'face 'mpdired-progress)))))
+		(put-text-property (+ bol x) eol 'face 'mpdired-progress)))
+	    ;; Save current song id
+	    (setq mpdired--current-song songid)))
 	;; Go to bol no matter what
 	(goto-char (mpdired--bol))
 	;; Restore point and memorize stuff
@@ -875,6 +880,13 @@ SEPARATOR string."
 	     (setq mpdired--playlist nil))
 	   (mpdired-listall-internal parent t))
 	  (t (message "You are at the toplevel.")))))
+
+(defun mpdired-goto-current-song ()
+  "In the queue view, goes to the line of the currently playing song."
+  (interactive)
+  (when mpdired--current-song
+    (goto-char (point-min))
+    (mpdired--goto-id mpdired--current-song)))
 
 (defun mpdired-toggle-view ()
   "Toggles between the browser and the queue view."
