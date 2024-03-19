@@ -277,10 +277,8 @@
 	  ;; the beginning of the result.
 	  (with-current-buffer mpdired--main-buffer
 	    (setq mpdired--status
-		  (list state volume repeat random single consume)))
-	  (push songid result)
-          (push elapsed result)
-	  (push duration result))
+		  (list state volume repeat random single consume)
+		  mpdired--song (list songid elapsed duration))))
 	;; Then, "playlistid" content
 	;; File
 	(when (re-search-forward "^file: \\(.*\\)$" eol t 1)
@@ -301,10 +299,8 @@
       ;; Save status in main buffer
       (with-current-buffer mpdired--main-buffer
 	(setq mpdired--status
-	      (list state volume repeat random single consume)))
-      (push songid result)
-      (push elapsed result)
-      (push duration result))
+	      (list state volume repeat random single consume)
+	      mpdired--song (list songid elapsed duration))))
     ;; The last song if any
     (when file (push (list id file time) result))
     (reverse result)))
@@ -339,8 +335,9 @@
   "Communication buffer associated to this MPDired buffer.")
 (defvar-local mpdired--status nil
   "Local copy of the MPD status.  It will updated regularly.")
-(defvar-local mpdired--current-song nil
-  "Local copy of the current song ID.")
+(defvar-local mpdired--song nil
+  "Local copy of the current song state.  It is a list of form '(songid
+elapsed duration).")
 (defvar-local mpdired--error nil)
 
 ;; I have tried to use markers here but since I often erase the
@@ -498,13 +495,12 @@ used for mark followed by a space."
 	 (peer-service (plist-get peer-info :service))
 	 (peer-localp (eq (plist-get peer-info :family) 'local))
 	 (main-buffer (mpdired--main-name peer-host peer-service peer-localp))
-	 (data (mpdired--parse-queue))
-	 (songid (car data))
-	 (elapsed (cadr data))
-	 (duration (caddr data))
-	 (songs (cdddr data)))
+	 (songs (mpdired--parse-queue)))
     (with-current-buffer main-buffer
-      (let ((inhibit-read-only t))
+      (let ((inhibit-read-only t)
+	    (songid (car mpdired--song))
+	    (elapsed (cadr mpdired--song))
+	    (duration (caddr mpdired--song)))
 	(erase-buffer)
 	;; Insert content
 	(save-excursion
@@ -525,9 +521,7 @@ used for mark followed by a space."
 		   (eol (line-end-position))
 		   (x (/ (* elapsed (- eol bol)) duration)))
 	      (when (> eol (+ bol x))
-		(put-text-property (+ bol x) eol 'face 'mpdired-progress)))
-	    ;; Save current song id
-	    (setq mpdired--current-song songid)))
+		(put-text-property (+ bol x) eol 'face 'mpdired-progress)))))
 	;; Go to bol no matter what
 	(goto-char (mpdired--bol))
 	;; Restore point and memorize stuff
