@@ -372,7 +372,16 @@ used for mark followed by a space."
 	  ((eq type 'playlist)
 	   (put-text-property bol eol 'face 'mpdired-playlist))
 	  ((eq type 'song)
-	   (put-text-property bol eol 'face 'mpdired-song)))))
+	   (put-text-property bol eol 'face 'mpdired-song)
+	   ;; Add "progress bar" back
+	   (when mpdired--song
+	     (let* ((currid (get-text-property bol 'id))
+		    (songid (car mpdired--song))
+		    (elapsed (cadr mpdired--song))
+		    (duration (caddr mpdired--song))
+		    (x (/ (* elapsed (- eol bol)) duration)))
+	       (when (and (= currid songid) (> eol (+ bol x)))
+		 (put-text-property (+ bol x) eol 'face 'mpdired-progress))))))))
 
 (defun mpdired--insert-entry (entry)
   "Insert ENTRY in MPDired browser view."
