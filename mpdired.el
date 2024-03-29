@@ -57,8 +57,8 @@
 ;;
 ;; MPDired is designed to be the least intrusive.  Nothing will be
 ;; shown into the mode line, which I consider to be user's territory.
-;; There is no timers set by MPDired, so updating anything always
-;; comes from a user action.
+;; There is also no timers set by MPDired, so updating anything always
+;; comes from a user's action.
 ;;
 ;; The browser view is built from the MPD's "listall" and
 ;; "listplaylists" commands.  The MPD's documentation does *not*
@@ -1016,8 +1016,9 @@ SEPARATOR string."
 	  (when (and mark (char-equal mark want))
 	    (push (cons id (cons type uri)) result)))
 	(forward-line)))
-    ;; No marked, get the entry at point.
-    (unless result
+    ;; No marked, get the entry at point except for the deletion flag.
+    (unless (or result
+		(char-equal want ?D))
       (let* ((bol (mpdired--bol))
 	     (id (get-text-property bol 'id))
 	     (type (get-text-property bol 'type))
