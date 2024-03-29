@@ -976,7 +976,7 @@ SEPARATOR string."
   (interactive)
   (when (eq mpdired--view 'queue)
     (mpdired--mark (elt (number-to-string mpdired--order-index) 0))
-    (setq mpdired--order-index (mod (+ mpdired--order-index 1) 10))
+    (setq mpdired--order-index (mod (1+ mpdired--order-index) 10))
     (mpdired-next-line)))
 
 (defun mpdired-reset-order-index ()
