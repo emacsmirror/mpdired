@@ -116,7 +116,7 @@
   "N"                       #'mpdired-next-internal
   "P"                       #'mpdired-previous-internal
   "a"                       #'mpdired-add
-  "x"                       #'mpdired-flagged-delete
+  "x"                       #'mpdired-execute
   "D"                       #'mpdired-delete
   ;; Status settings and toggles
   "<SPC>"                   #'mpdired-pause-internal
@@ -141,7 +141,10 @@
   "* t"                     #'mpdired-toggle-marks
   "* c"                     #'mpdired-change-marks
   "% d"                     #'mpdired-flag-files-regexp
-  "% m"                     #'mpdired-mark-files-regexp)
+  "% m"                     #'mpdired-mark-files-regexp
+  ;; Ordering
+  "i"                       #'mpdired-put-order-at-point
+  "r"                       #'mpdired-reset-order-index)
 
 (defface mpdired-currdir
   '((t :inherit dired-header))
@@ -339,6 +342,7 @@
   "Local copy of the current song state.  It is a list of form '(songid
 elapsed duration).")
 (defvar-local mpdired--error nil)
+(defvar-local mpdired--order-index 0)
 
 ;; I have tried to use markers here but since I often erase the
 ;; buffer's content, these markers are reset to 1.
@@ -569,7 +573,8 @@ used for mark followed by a space."
 			  (eq mpdired--last-command 'listplaylist))
 		      (mpdired--present-list proc))
 		     ((or (eq mpdired--last-command 'queue)
-			  (eq mpdired--last-command 'deleteid))
+			  (eq mpdired--last-command 'deleteid)
+			  (eq mpdired--last-command 'moveid))
 		      (mpdired--present-queue proc)))
 	       ;; Display and reset information message.
 	       (when mpdired--message
@@ -683,6 +688,21 @@ an optional communication buffer that would be used instead of
 	(dolist (i id)
 	  (process-send-string process (format "deleteid %d\n" i)))
       (process-send-string process (format "deleteid %d\n" id)))
+    ;; XXX A playlistid should always be preceded by a status
+    (process-send-string process "status\n")
+    (process-send-string process "playlistid\n")
+    (process-send-string process "command_list_end\n")))
+
+(defun mpdired-moveid-internal (id)
+  (mpdired--with-comm-buffer process nil
+    (setq mpdired--last-command 'moveid)
+    (process-send-string process "command_list_begin\n")
+    (if (listp id)
+	(let ((place 0))
+	  (dolist (i id)
+	    (process-send-string process (format "moveid %d +%d\n" i place))
+	    (setq place (1+ place))))
+      (process-send-string process (format "moveid %d 0\n" id)))
     ;; XXX A playlistid should always be preceded by a status
     (process-send-string process "status\n")
     (process-send-string process "playlistid\n")
@@ -952,6 +972,17 @@ SEPARATOR string."
   (mpdired--mark ?D)
   (mpdired-next-line))
 
+(defun mpdired-put-order-at-point ()
+  (interactive)
+  (when (eq mpdired--view 'queue)
+    (mpdired--mark (elt (number-to-string mpdired--order-index) 0))
+    (setq mpdired--order-index (mod (+ mpdired--order-index 1) 10))
+    (mpdired-next-line)))
+
+(defun mpdired-reset-order-index ()
+  (interactive)
+  (setq mpdired--order-index 0))
+
 (defun mpdired-toggle-marks ()
   "Toggles marks."
   (interactive)
@@ -1025,6 +1056,22 @@ SEPARATOR string."
 	     (uri (get-text-property bol 'uri)))
 	(setq result (list (cons id (cons type uri))))))
     (reverse result)))
+
+(defun mpdired--collect-ordered ()
+  "Collects songs id in their ordering marks."
+  (let (result)
+    (save-excursion
+      (goto-char (point-min))
+      (while (not (eobp))
+	(let* ((bol (mpdired--bol))
+	       (mark (get-text-property bol 'mark))
+	       (id (get-text-property bol 'id))
+	       (type (get-text-property bol 'type))
+	       (uri (get-text-property bol 'uri)))
+	  (when (and mark (seq-position "0123456789" mark))
+	    (push (cons mark id) result)))
+	(forward-line)))
+    (seq-sort #'(lambda (a b) (< (car a) (car b))) result)))
 
 (defun mpdired-mark-files-regexp (regexp &optional mark)
   "Marks entries which matches a user provided REGEXP."
@@ -1107,15 +1154,19 @@ browser view."
     (unless (eobp)
       (get-text-property (mpdired--bol) 'id))))
 
-(defun mpdired-flagged-delete ()
-  "Removes flagged songs from the queue."
+(defun mpdired-execute ()
+  "Removes flagged songs from the queue and sort songs in the queue."
   (interactive)
   (when (eq mpdired--view 'queue)
-    (let* ((flagged (mpdired--collect-marked ?D))
-	   (ids (mapcar 'car flagged)))
+    (let* ((flagged (mapcar 'car (mpdired--collect-marked ?D)))
+	   (ordered (mapcar 'cdr (mpdired--collect-ordered))))
+      ;; First, deletion
       (when flagged
 	(setf mpdired--songid-point (mpdired--find-next-unmarked-id))
-	(mpdired-deleteid-internal ids)))))
+	(mpdired-deleteid-internal flagged))
+      ;; Then, sort songs
+      (when ordered
+	(mpdired-moveid-internal ordered)))))
 
 (defun mpdired-update ()
   "Updates the buffer content.  It works both for browser and queue view."
