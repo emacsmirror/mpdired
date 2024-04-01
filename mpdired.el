@@ -385,7 +385,8 @@ used for mark followed by a space."
 		    (duration (caddr mpdired--song))
 		    (x (/ (* elapsed (- eol bol)) duration)))
 	       (when (and (= currid songid) (> eol (+ bol x)))
-		 (put-text-property (+ bol x) eol 'face 'mpdired-progress))))))))
+		 (put-text-property (+ bol x) eol 'face 'mpdired-progress))))))
+    (set-buffer-modified-p nil)))
 
 (defun mpdired--insert-entry (entry)
   "Insert ENTRY in MPDired browser view."
@@ -478,6 +479,7 @@ used for mark followed by a space."
 	  (when (stringp top)
 	    (insert (propertize top 'face 'mpdired-currdir) ":\n"))
 	  (mapc #'mpdired--insert-entry data))
+	(set-buffer-modified-p nil)
 	;; Memorize stuff
 	(if ascending-p (setq from mpdired--directory))
 	(setq mpdired--directory (when top top)
@@ -535,6 +537,7 @@ used for mark followed by a space."
 		   (x (/ (* elapsed (- eol bol)) duration)))
 	      (when (> eol (+ bol x))
 		(put-text-property (+ bol x) eol 'face 'mpdired-progress)))))
+	(set-buffer-modified-p nil)
 	;; Go to bol no matter what
 	(goto-char (mpdired--bol))
 	;; Restore point and memorize stuff
@@ -958,7 +961,8 @@ SEPARATOR string."
       (save-excursion
 	(goto-char (line-beginning-position))
 	(delete-char 1)
-	(insert-char ?\s)))))
+	(insert-char ?\s))
+      (set-buffer-modified-p nil))))
 
 (defun mpdired-mark-at-point ()
   "Marks entry at point."
