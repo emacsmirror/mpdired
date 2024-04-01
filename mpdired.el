@@ -944,7 +944,7 @@ SEPARATOR string."
 
 (defun mpdired--mark (mark)
   (let ((inhibit-read-only t))
-    (when (get-text-property (mpdired--bol) 'uri)
+    (when (and (not (eobp)) (get-text-property (mpdired--bol) 'uri))
       (save-excursion
 	(goto-char (line-beginning-position))
 	(delete-char 1)
@@ -955,8 +955,8 @@ SEPARATOR string."
 (defun mpdired--clear-mark ()
   (let ((inhibit-read-only t)
 	(bol (mpdired--bol)))
-    (when (get-text-property bol 'mark)
-      (remove-text-properties (mpdired--bol) (line-end-position) '(mark face))
+    (when (and (not (eobp)) (get-text-property bol 'mark))
+      (remove-text-properties bol (line-end-position) '(mark face))
       (mpdired--reset-face)
       (save-excursion
 	(goto-char (line-beginning-position))
