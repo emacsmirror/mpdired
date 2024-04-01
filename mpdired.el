@@ -700,7 +700,7 @@ an optional communication buffer that would be used instead of
     (if (listp id)
 	(let ((place 0))
 	  (dolist (i id)
-	    (process-send-string process (format "moveid %d +%d\n" i place))
+	    (process-send-string process (format "moveid %d %d\n" i place))
 	    (setq place (1+ place))))
       (process-send-string process (format "moveid %d 0\n" id)))
     ;; XXX A playlistid should always be preceded by a status
