@@ -982,9 +982,9 @@ otherwise."
 (defun mpdired-put-order-at-point ()
   (interactive)
   (when (eq mpdired--view 'queue)
-    (mpdired--mark (elt (number-to-string mpdired--order-index) 0))
-    (setq mpdired--order-index (mod (1+ mpdired--order-index) 10))
-    (mpdired-next-line)))
+    (when (mpdired--mark (elt (number-to-string mpdired--order-index) 0))
+      (setq mpdired--order-index (mod (1+ mpdired--order-index) 10))
+      (mpdired-next-line))))
 
 (defun mpdired-reset-order-index ()
   (interactive)
