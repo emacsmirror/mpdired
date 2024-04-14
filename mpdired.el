@@ -38,7 +38,7 @@
 ;;;; Usage:
 ;;
 ;; Just do "M-x mpdired".  It will pop you to a MPDired buffer in the
-;; queue view by default.  To navigate between the queue view and the
+;; queue view by default.  To alternate between the queue view and the
 ;; browser view hit `o'.
 ;;
 ;; MPDired connects to a MPD server using two customs: `mpdired-host'
