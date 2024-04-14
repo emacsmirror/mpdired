@@ -571,13 +571,13 @@ used for mark followed by a space."
 			(setq mpdired--error 'no-playlist)))
 		     (t (message (match-string 1)))))
 	      ((re-search-backward "^OK$" nil t)
-	       ;; Present results in the main buffer
+	       ;; Present results in the main buffer.  It depends on
+	       ;; what was the last command.
 	       (cond ((or (eq mpdired--last-command 'listall)
 			  (eq mpdired--last-command 'listplaylist))
 		      (mpdired--present-list proc))
 		     ((or (eq mpdired--last-command 'queue)
-			  (eq mpdired--last-command 'deleteid)
-			  (eq mpdired--last-command 'moveid))
+			  (eq mpdired--last-command 'delete-or-move))
 		      (mpdired--present-queue proc)))
 	       ;; Display and reset information message.
 	       (when mpdired--message
@@ -683,29 +683,20 @@ an optional communication buffer that would be used instead of
       (process-send-string process (format "add %S\n" typed-uris)))
     (process-send-string process "command_list_end\n")))
 
-(defun mpdired-deleteid-internal (id)
+(defun mpdired-delete-or-move-internal (flagged ordered)
   (mpdired--with-comm-buffer process nil
-    (setq mpdired--last-command 'deleteid)
+    (setq mpdired--last-command 'delete-or-move)
     (process-send-string process "command_list_begin\n")
-    (if (listp id)
-	(dolist (i id)
+    (if (listp flagged)
+	(dolist (i flagged)
 	  (process-send-string process (format "deleteid %d\n" i)))
-      (process-send-string process (format "deleteid %d\n" id)))
-    ;; XXX A playlistid should always be preceded by a status
-    (process-send-string process "status\n")
-    (process-send-string process "playlistid\n")
-    (process-send-string process "command_list_end\n")))
-
-(defun mpdired-moveid-internal (id)
-  (mpdired--with-comm-buffer process nil
-    (setq mpdired--last-command 'moveid)
-    (process-send-string process "command_list_begin\n")
-    (if (listp id)
+      (process-send-string process (format "deleteid %d\n" flagged)))
+    (if (listp ordered)
 	(let ((place 0))
-	  (dolist (i id)
+	  (dolist (i ordered)
 	    (process-send-string process (format "moveid %d %d\n" i place))
 	    (setq place (1+ place))))
-      (process-send-string process (format "moveid %d 0\n" id)))
+      (process-send-string process (format "moveid %d 0\n" ordered)))
     ;; XXX A playlistid should always be preceded by a status
     (process-send-string process "status\n")
     (process-send-string process "playlistid\n")
@@ -1130,7 +1121,7 @@ otherwise."
       (when (= 1 (length typed-uris))
 	(mpdired-next-line)))))
 
-(defun mpdired-deleteid-at-point ()
+(defun mpdired-delete-at-point ()
   (let ((id (get-text-property (mpdired--bol) 'id)))
     (when id
       (save-excursion
@@ -1139,7 +1130,7 @@ otherwise."
 	  (unless (>= bol (point-max))
 	    (setq mpdired--songid-point
 		  (get-text-property bol 'id)))))
-      (mpdired-deleteid-internal id))))
+      (mpdired-delete-or-move-internal id nil))))
 
 (defun mpdired-remove-playlist-at-point ()
   (let* ((bol (mpdired--bol))
@@ -1155,7 +1146,7 @@ otherwise."
 browser view."
   (interactive)
   (cond ((eq mpdired--view 'queue)
-	 (mpdired-deleteid-at-point))
+	 (mpdired-delete-at-point))
 	((eq mpdired--view 'browser)
 	 (mpdired-remove-playlist-at-point))))
 
@@ -1173,13 +1164,9 @@ browser view."
   (when (eq mpdired--view 'queue)
     (let* ((flagged (mapcar 'car (mpdired--collect-marked ?D)))
 	   (ordered (mapcar 'cdr (mpdired--collect-ordered))))
-      ;; First, deletion
       (when flagged
-	(setf mpdired--songid-point (mpdired--find-next-unmarked-id))
-	(mpdired-deleteid-internal flagged))
-      ;; Then, sort songs
-      (when ordered
-	(mpdired-moveid-internal ordered)))))
+	(setf mpdired--songid-point (mpdired--find-next-unmarked-id)))
+      (mpdired-delete-or-move-internal flagged ordered))))
 
 (defun mpdired-update ()
   "Updates the buffer content.  It works both for browser and queue view."
