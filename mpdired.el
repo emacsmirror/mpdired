@@ -342,7 +342,7 @@
   "Local copy of the current song state.  It is a list of form '(songid
 elapsed duration).")
 (defvar-local mpdired--error nil)
-(defvar-local mpdired--order-index 0)
+(defvar-local mpdired--order-index ?0)
 
 ;; I have tried to use markers here but since I often erase the
 ;; buffer's content, these markers are reset to 1.
@@ -979,16 +979,22 @@ otherwise."
   (mpdired--mark ?D)
   (mpdired-next-line))
 
+(defun mpdired--increment-char (char)
+  "Modular increment CHAR from in a 0-9a-z space."
+  (cond ((or (= char ?z) (< char ?0)) ?0)
+	((= char ?9) ?a)
+	(t (1+ char))))
+
 (defun mpdired-put-order-at-point ()
   (interactive)
   (when (eq mpdired--view 'queue)
-    (when (mpdired--mark (elt (number-to-string mpdired--order-index) 0))
-      (setq mpdired--order-index (mod (1+ mpdired--order-index) 10))
+    (when (mpdired--mark mpdired--order-index)
+      (setq mpdired--order-index (mpdired--increment-char mpdired--order-index))
       (mpdired-next-line))))
 
 (defun mpdired-reset-order-index ()
   (interactive)
-  (setq mpdired--order-index 0))
+  (setq mpdired--order-index ?0))
 
 (defun mpdired-toggle-marks ()
   "Toggles marks."
@@ -1075,7 +1081,7 @@ otherwise."
 	       (id (get-text-property bol 'id))
 	       (type (get-text-property bol 'type))
 	       (uri (get-text-property bol 'uri)))
-	  (when (and mark (seq-position "0123456789" mark))
+	  (when (and mark (seq-position "0123456789abcdefghijklmnopqrstuvwxyz" mark))
 	    (push (cons mark id) result)))
 	(forward-line)))
     (seq-sort #'(lambda (a b) (< (car a) (car b))) result)))
