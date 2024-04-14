@@ -943,6 +943,8 @@ SEPARATOR string."
 	       (t (mpdired-listall-internal ""))))))
 
 (defun mpdired--mark (mark)
+  "Marks current entry with MARK.  Returns t if the mark is done and nil
+otherwise."
   (let ((inhibit-read-only t))
     (when (and (not (eobp)) (get-text-property (mpdired--bol) 'uri))
       (save-excursion
@@ -950,7 +952,8 @@ SEPARATOR string."
 	(delete-char 1)
 	(insert-char mark))
       (put-text-property (mpdired--bol) (line-end-position) 'mark mark)
-      (mpdired--reset-face))))
+      (mpdired--reset-face)
+      t)))
 
 (defun mpdired--clear-mark ()
   (let ((inhibit-read-only t)
