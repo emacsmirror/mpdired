@@ -354,7 +354,12 @@ elapsed duration).")
 (defun mpdired--bol ()
   "Correct beginning of line in a MPDired buffer.  First two columns are
 used for mark followed by a space."
-  (+ 2 (line-beginning-position)))
+  (let* ((bol (line-beginning-position))
+	 (type (get-text-property bol 'type)))
+    ;; Status start at first column.
+    (if (and type (eq type 'status))
+	bol
+      (+ 2 bol))))
 
 (defun mpdired--short-name (string)
   (or (and (string-match "/\\([^/]*\\)\\'" string)
@@ -431,6 +436,8 @@ used for mark followed by a space."
       (when random (insert " Random"))
       (when single (insert " Single"))
       (when consume (insert " Consume"))
+      (put-text-property (line-beginning-position)
+			 (line-end-position) 'type 'status)
       (insert "\n"))))
 
 (defun mpdired--insert-song (song)
