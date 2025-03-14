@@ -912,9 +912,9 @@ SEPARATOR string."
 (defun mpdired-goto-current-song ()
   "In the queue view, goes to the line of the currently playing song."
   (interactive)
-  (when mpdired--current-song
+  (when mpdired--song
     (goto-char (point-min))
-    (mpdired--goto-id mpdired--current-song)))
+    (mpdired--goto-id (car mpdired--song))))
 
 (defun mpdired-toggle-view ()
   "Toggles between the browser and the queue view."
