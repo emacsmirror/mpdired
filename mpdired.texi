@@ -1,0 +1,52 @@
+\input texinfo @c -*-texinfo-*-
+@c %**start of header
+@setfilename mpdired.info
+@settitle MPDired Manual
+@c %**end of header
+
+@dircategory Emacs
+@direntry
+* MPDired: (mpdired).  A dired-like music player daemon's client.
+@end direntry
+@copying
+This file documents the mpdired.el package.
+
+Copyright @copyright{} 2024, 2025 Free Software Foundation, Inc.
+
+@quotation
+Permission is granted to ...
+@end quotation
+@end copying
+
+@titlepage
+@set VERSION 3
+@title MPDired Manual version @value{VERSION}
+@author Manuel Giraud
+@c  The following two commands
+@c  start the copyright page.
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top TITLE
+
+@insertcopying
+@end ifnottex
+
+@menu
+* First Chapter::
+* Copying::          Your rights and freedoms.
+@end menu
+
+@node First Chapter
+@chapter First Chapter
+
+@cindex first chapter
+@cindex chapter, first
+
+@node Copying
