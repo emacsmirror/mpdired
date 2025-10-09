@@ -10,24 +10,25 @@
 
 ;; This file is NOT part of GNU Emacs.
 
-;; GNU Emacs is free software: you can redistribute it and/or modify
+;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation, either version 3 of the License, or
 ;; (at your option) any later version.
 ;;
-;; GNU Emacs is distributed in the hope that it will be useful,
+;; This program is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
+;; along with this file.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 ;;
-;; This a client for the Music Player Daemon (mpd) with interactions
-;; inspired from Dired.  It features two views packed into the same
-;; interactive buffer: the browser view and the queue view.
+;; MPDired is a client for the Music Player Daemon (mpd) with
+;; interactions inspired from Dired.  It features two views packed
+;; into the same interactive buffer: the browser view and the queue
+;; view.
 ;;
 ;; In those views, most of the interactions are mimic after Dired mode
 ;; with marks and action on them.  For example, in the queue view, you
