@@ -6,7 +6,7 @@
 
 @dircategory Emacs
 @direntry
-* MPDired: (mpdired).  A dired-like music player daemon's client.
+* MPDired: (mpdired).  A dired-like client for Music Player Daemon.
 @end direntry
 @copying
 This file documents the mpdired.el package.
@@ -14,7 +14,15 @@ This file documents the mpdired.el package.
 Copyright @copyright{} 2024, 2025 Free Software Foundation, Inc.
 
 @quotation
-Permission is granted to ...
+The source and documentation of MPDired is free software.  You can
+redistribute it and/or modify it under the terms of the GNU General
+Public License as published by the Free Software Foundation; either
+version 3, or (at your option) any later version.
+
+MPDired is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License in
+the file COPYING in the same directory as this file for more details.
 @end quotation
 @end copying
 
