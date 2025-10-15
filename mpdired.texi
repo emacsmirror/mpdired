@@ -110,6 +110,33 @@ buffers.}.  By default, the MPDired buffer displays the queue view.
 @node Queue
 @chapter Queue
 
+The queue view is where you can see the list of songs queued and ready
+to be played.  Here, you can manage this list.
+
+The first line of the buffer shows some status information of the MPD
+server: is it stopped, paused or playing?  If the latter, this line
+also shows the current volume.
+
+The remaining lines of the buffer show the songs, one for each line.
+You can navigate this list with the following commands:
+
+@table @kbd
+
+@item n
+@itemx C-n
+@findex mpdired-next-line
+Move to the next line.
+
+@item p
+@itemx C-p
+@findex mpdired-previous-line
+Move to the previous line.
+
+@end table
+
+In this view, when on a song's line, hitting @key{RET}
+(@code{mpdired-enter}) will start playing this song.
+
 @node Browser
 @chapter Browser
 
