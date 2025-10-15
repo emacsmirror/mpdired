@@ -51,6 +51,7 @@ the file COPYING in the same directory as this file for more details.
 * Connection::          Where to get the music?
 * Queue::               What is playing?
 * Browser::
+* Philosphy::
 * Index::
 @end menu
 
@@ -111,6 +112,29 @@ buffers.}.  By default, the MPDired buffer displays the queue view.
 
 @node Browser
 @chapter Browser
+
+@node Philosphy
+@chapter Philosphy
+
+This is a bit meta so I put this part as a later chapter.
+
+MPDired is designed to be the least intrusive possible.  Nothing will
+be shown into the mode line, which I consider to be user's territory.
+There is also no timers set by MPDired, so updating anything always
+comes from a user's action.
+
+The browser view is built around the MPD's "listall" and
+"listplaylists" commands.  The MPD's documentation does @strong{not}
+recommend to do so but @acronym{AFAIU} there is no other way to access
+your music collection in terms of directories and files.  As my own
+music collection is already ordered into directories and with
+meaningful filenames, I prefer to use this interface rather then to
+rely on files' tags.
+
+Be aware that if your music collection consists of just a set of not
+very well named files into one big directory and that you rely on tags
+such as "Genre", "Album", "Artist" to find your way through it then,
+maybe, MPDired is not the right client for you.
 
 @node Index
 @unnumbered Index
