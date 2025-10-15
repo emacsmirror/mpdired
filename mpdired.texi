@@ -9,7 +9,7 @@
 * MPDired: (mpdired).  A dired-like client for Music Player Daemon.
 @end direntry
 @copying
-This file documents the mpdired.el package.
+This file documents the MPDired package.
 
 Copyright @copyright{} 2024, 2025 Free Software Foundation, Inc.
 
@@ -41,20 +41,84 @@ the file COPYING in the same directory as this file for more details.
 
 @ifnottex
 @node Top
-@top TITLE
+@top MPDired
 
 @insertcopying
 @end ifnottex
 
 @menu
-* First Chapter::
-* Copying::          Your rights and freedoms.
+* Introdution::         What is MPDired?
+* Connection::          Where to get the music?
+* Queue::               What is playing?
+* Browser::
+* Index::
 @end menu
 
-@node First Chapter
-@chapter First Chapter
+@node Introdution
+@chapter Introdution
+@cindex introduction
+@cindex intro
+@cindex view
+@findex mpdired-toggle-view
 
-@cindex first chapter
-@cindex chapter, first
+MPDired is an Emacs' client for the @uref{https://musicpd.org, Music
+Player Daemon}.  Its interactions are inspired from
+Dired. @xref{Dired,,,emacs}
 
-@node Copying
+It features two views packed into the same interactive buffer: the
+queue view (@pxref{Queue}) and the browser view (@pxref{Browser}).
+The queue view is where you see the songs that are playing or about to
+play.  The browser view is where you see your songs' collection.
+
+When in a MPDired buffer, you can switch from one view to the other
+with @kbd{o} (@code{mpdired-toggle-view}).
+
+But before being able to use MPDired, you should connect to your
+@acronym{MPD, Music Player Daemon} server.
+
+@node Connection
+@chapter Connection
+@vindex mpdired-host
+@vindex mpdired-port
+@findex mpdired
+
+MPDired connects to a MPD server using two user options:
+@code{mpdired-host} and @code{mpdired-port}.  Those options default to
+your @env{MPD_HOST} and @env{MPD_PORT} environment variables or to
+"localhost" and 6600 if these are not set.
+
+If your have configured your MPD server to serve over a Unix domain
+socket, you would use @code{mpdired-host} only and set it to this
+socket's path.
+
+When you have customized those options, you can start MPDired with
+
+@example
+@kbd{M-x mpdired @key{RET}}
+@end example
+
+Emacs pops you into a MPDired buffer connected to your
+server@footnote{Once connected, the handle to the server is saved in a
+buffer local variable.  From now on, MPDired only uses
+@code{mpdired-host} and @code{mpdired-port} for global commands to
+connect to the user's default server.  All commands used inside a
+MPDired buffer will connect to the buffer local server instead.  This
+way, you can manage more than one MPD server with multiple MPDired
+buffers.}.  By default, the MPDired buffer displays the queue view.
+
+@node Queue
+@chapter Queue
+
+@node Browser
+@chapter Browser
+
+@node Index
+@unnumbered Index
+
+@c Merge variable and function index into concept index.
+@syncodeindex vr cp
+@syncodeindex fn cp
+
+@printindex cp
+
+@bye
