@@ -86,9 +86,9 @@ But before being able to use MPDired, you should connect to your
 MPDired connects to a MPD server using two user options:
 @code{mpdired-host} and @code{mpdired-port}.  Those options default to
 your @env{MPD_HOST} and @env{MPD_PORT} environment variables or to
-"localhost" and 6600 if these are not set.
+"localhost" and 6600, respectively, if these are not set.
 
-If your have configured your MPD server to serve over a Unix domain
+If you have configured your MPD server to serve over a Unix domain
 socket, you would use @code{mpdired-host} only and set it to this
 socket's path.
 
@@ -109,13 +109,14 @@ buffers.}.  By default, the MPDired buffer displays the queue view.
 
 @node Queue
 @chapter Queue
+@findex mpdired-enter
 
 The queue view is where you can see the list of songs queued and ready
 to be played.  Here, you can manage this list.
 
 The first line of the buffer shows some status information of the MPD
 server: is it stopped, paused or playing?  If the latter, this line
-also shows the current volume.
+also shows the current sound volume.
 
 The remaining lines of the buffer show the songs, one for each line.
 You can navigate this list with the following commands:
@@ -135,7 +136,7 @@ Move to the previous line.
 @end table
 
 In this view, when on a song's line, hitting @key{RET}
-(@code{mpdired-enter}) will start playing this song.
+(@code{mpdired-enter}) will start playing this song right away.
 
 @node Browser
 @chapter Browser
@@ -145,18 +146,18 @@ In this view, when on a song's line, hitting @key{RET}
 
 This is a bit meta so I put this part as a later chapter.
 
-MPDired is designed to be the least intrusive possible.  Nothing will
-be shown into the mode line, which I consider to be user's territory.
-There is also no timers set by MPDired, so updating anything always
-comes from a user's action.
+MPDired is designed to be the least intrusive possible.  Nothing is
+displayed into the global mode line, which I consider to be user's
+territory.  There is also no timers set by MPDired, so updating
+anything always comes from a user's action.
 
 The browser view is built around the MPD's "listall" and
 "listplaylists" commands.  The MPD's documentation does @strong{not}
 recommend to do so but @acronym{AFAIU} there is no other way to access
 your music collection in terms of directories and files.  As my own
 music collection is already ordered into directories and with
-meaningful filenames, I prefer to use this interface rather then to
-rely on files' tags.
+meaningful filenames, I prefer to use this interface rather than
+relying on files' tags.
 
 Be aware that if your music collection consists of just a set of not
 very well named files into one big directory and that you rely on tags
