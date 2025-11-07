@@ -160,7 +160,7 @@
   "Face used to show a playlist.")
 
 (defface mpdired-song
-  '((t :inherit dired-ignored))
+  '((t :inherit dired-filename))
   "Face used to show a song.")
 
 (defface mpdired-progress
