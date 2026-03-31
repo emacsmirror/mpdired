@@ -164,7 +164,7 @@
   "Face used to show a song.")
 
 (defface mpdired-progress
-  '((t :inherit dired-special))
+  '((t :inherit highlight))
   "Face used to show the progress of a song.")
 
 (defface mpdired-marked
