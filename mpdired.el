@@ -927,14 +927,14 @@ SEPARATOR string."
 	 (cond (mpdired--directory
 		(let ((proc (get-buffer-process mpdired--comm-buffer)))
 		  (mpdired-listall-internal mpdired--directory)
-		  ;; XXX this is a bit hacky
-		  (while (accept-process-output proc 0 50))
+		  ;; Wait for server reply.
+		  (while (accept-process-output proc 0.1))
 		  ;; If we get an error "No such directory" then we may
 		  ;; have been visiting a playlist.
 		  (when (eq mpdired--error 'no-directory)
 		    (setq mpdired--error nil)
 		    (mpdired-listplaylist-internal mpdired--directory))
-		  (while (accept-process-output proc 0 50))
+		  (while (accept-process-output proc 0.1))
 		  ;; If get an error "No such playlist" then we may have
 		  ;; a bogus `mpdired--directory': go back to toplevel.
 		  (when (eq mpdired--error 'no-playlist)
