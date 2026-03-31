@@ -11,7 +11,7 @@
 @copying
 This file documents the MPDired package.
 
-Copyright @copyright{} 2024, 2025 Free Software Foundation, Inc.
+Copyright @copyright{} 2024-2026 Free Software Foundation, Inc.
 
 @quotation
 The source and documentation of MPDired is free software.  You can
