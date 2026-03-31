@@ -79,8 +79,8 @@
 ;; - MPDired does not handle MPD server with password.
 ;;
 ;; - Marks are *very* temporary.  As MPDired rebuilds the views often
-;;   and the marks are only stored in text properties they could
-;;   easily be wiped out.
+;;   and the marks are only stored in text properties they are
+;;   regularly wiped out.
 ;;
 ;; - some URI based commands work in both view. So for example, in the
 ;;   queue, you can append the song at point to this same queue.
