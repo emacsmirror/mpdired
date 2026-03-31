@@ -1237,8 +1237,9 @@ settings.  It returns a cons with communication and main buffers names."
   (let* ((buffers (mpdired--prepare))
 	 (comm (car buffers))
 	 (main (cdr buffers)))
-    ;; Defaults to queue view
-    (mpdired-queue-internal comm)
+    (unless (get-buffer main)
+      ;; Defaults to queue view
+      (mpdired-queue-internal comm))
     (pop-to-buffer main)))
 
 (provide 'mpdired)
