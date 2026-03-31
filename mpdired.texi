@@ -27,7 +27,7 @@ the file COPYING in the same directory as this file for more details.
 @end copying
 
 @titlepage
-@set VERSION 3
+@set VERSION 4
 @title MPDired Manual version @value{VERSION}
 @author Manuel Giraud
 @c  The following two commands
@@ -63,13 +63,14 @@ the file COPYING in the same directory as this file for more details.
 @findex mpdired-toggle-view
 
 MPDired is an Emacs' client for the @uref{https://musicpd.org, Music
-Player Daemon}.  Its interactions are inspired from
-Dired. @xref{Dired,,,emacs}
+Player Daemon}.  In MPDired, most of the user's interactions are
+inspired from Dired. @xref{Dired,,,emacs}
 
 It features two views packed into the same interactive buffer: the
 queue view (@pxref{Queue}) and the browser view (@pxref{Browser}).
 The queue view is where you see the songs that are playing or about to
-play.  The browser view is where you see your songs' collection.
+play.  The browser view is where you can browse through your songs'
+collection.
 
 When in a MPDired buffer, you can switch from one view to the other
 with @kbd{o} (@code{mpdired-toggle-view}).
@@ -146,17 +147,17 @@ In this view, when on a song's line, hitting @key{RET}
 
 This is a bit meta so I put this part as a later chapter.
 
-MPDired is designed to be the least intrusive possible.  Nothing is
-displayed into the global mode line, which I consider to be user's
-territory.  There is also no timers set by MPDired, so updating
-anything always comes from a user's action.
+MPDired is designed to be the least intrusive possible.  Except for
+the mode name, nothing is displayed into the global mode line, which I
+consider to be user's territory.  There is also no timers set by
+MPDired, so updating anything always comes from a user's action.
 
-The browser view is built around the MPD's "listall" and
-"listplaylists" commands.  The MPD's documentation does @strong{not}
-recommend to do so but @acronym{AFAIU} there is no other way to access
-your music collection in terms of directories and files.  As my own
-music collection is already ordered into directories and with
-meaningful filenames, I prefer to use this interface rather than
+The browser view is built around the MPD's @code{listall} and
+@code{listplaylists} commands.  The MPD's documentation does
+@strong{not} recommend to do so but @acronym{AFAIU} there is no other
+way to access your music collection in terms of directories and files.
+As my own music collection is already ordered into directories and
+with meaningful filenames, I prefer to use this interface rather than
 relying on files' tags.
 
 Be aware that if your music collection consists of just a set of not
