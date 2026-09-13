@@ -122,6 +122,7 @@
   ;; Status settings and toggles
   "<SPC>"                   #'mpdired-pause-internal
   "v"                       #'mpdired-set-volume-internal
+  "("                       #'mpdired-toggle-short-title
   "s s"                     #'mpdired-stop
   "s R"                     #'mpdired-toggle-repeat
   "s r"                     #'mpdired-toggle-random
@@ -248,7 +249,7 @@
 	(songid 0)
 	(in-status-p t)
 	state volume repeat random single consume
-	result file time id)
+	result file time id title)
     (while (not (re-search-forward mpdired--eot (line-end-position) t 1))
       (let ((eol (line-end-position)))
         ;; First, "status" content
@@ -289,14 +290,17 @@
 	  ;; if file is already set store the previous entry in the
 	  ;; list.
 	  (when file
-	    (push (list id file time) result))
+	    (push (list id file title time) result))
 	  (setq file (match-string 1)))
 	;; Time
 	(when (re-search-forward "^Time: \\(.*\\)$" eol t 1)
 	  (setq time (string-to-number (match-string 1))))
 	;; Id
 	(when (re-search-forward "^Id: \\(.*\\)$" eol t 1)
-	  (setq id (string-to-number (match-string 1)))))
+	  (setq id (string-to-number (match-string 1))))
+	;; Title
+	(when (re-search-forward "^Title: \\(.*\\)$" eol t 1)
+	  (setq title (match-string 1))))
       (forward-line))
     ;; There was only a status but no songs
     (when in-status-p
@@ -306,7 +310,7 @@
 	      (list state volume repeat random single consume)
 	      mpdired--song (list songid elapsed duration))))
     ;; The last song if any
-    (when file (push (list id file time) result))
+    (when file (push (list id file title time) result))
     (reverse result)))
 
 (define-derived-mode mpdired-mode special-mode "MPDired"
@@ -342,6 +346,8 @@
 (defvar-local mpdired--song nil
   "Local copy of the current song state.  It is a list of form '(songid
 elapsed duration).")
+(defvar-local mpdired--short-title-format nil
+  "If non-nil display songs in the playlist in short form.")
 (defvar-local mpdired--error nil)
 (defvar-local mpdired--order-index ?0)
 
@@ -443,9 +449,12 @@ used for mark followed by a space."
 
 (defun mpdired--insert-song (song)
   "Insert SONG in MPDired queue view."
-  (let ((id (car song))
-	(uri (cadr song)))
-    (insert "  " (propertize uri 'face 'mpdired-song))
+  (let* ((id (car song))
+	 (uri (cadr song))
+	 (title (if mpdired--short-title-format
+		    (caddr song)
+		  uri)))
+    (insert "  " (propertize title 'face 'mpdired-song))
     (let ((bol (mpdired--bol))
 	  (eol (line-end-position)))
       (put-text-property bol eol 'id id)
@@ -1223,6 +1232,13 @@ settings.  It returns a cons with communication and main buffers names."
   (interactive)
   (let ((buffers (mpdired--prepare)))
     (mpdired-previous-internal (car buffers))))
+
+(defun mpdired-toggle-short-title ()
+  (interactive)
+  (let ((buffers (mpdired--prepare)))
+    (with-current-buffer (cdr buffers)
+      (setf mpdired--short-title-format (not mpdired--short-title-format))
+      (mpdired-update))))
 
 (defun mpdired-set-volume (volume)
   "Sets MPDired volume."
