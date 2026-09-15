@@ -291,7 +291,10 @@
 	  ;; list.
 	  (when file
 	    (push (list id file title time) result))
-	  (setq file (match-string 1)))
+	  (setq file (match-string 1))
+	  ;; Prepare a fallback title of filename sans directory.
+	  (let ((split (split-string file "/")))
+	    (setq title (car (last split)))))
 	;; Time
 	(when (re-search-forward "^Time: \\(.*\\)$" eol t 1)
 	  (setq time (string-to-number (match-string 1))))
